@@ -1,0 +1,163 @@
+@page "/yatirim-takip"
+@using FinansalPusula.Services
+@inject InvestmentService InvestmentService
+@inject GeminiService GeminiService
+
+<PageTitle>Yatırım Takip - Finansal Pusula</PageTitle>
+
+<div class="container-fluid animate-fade-in">
+    <div class="row">
+        <div class="col-xl-10 offset-xl-1">
+            <div class="d-flex align-items-center mb-5 mt-4">
+                <div class="p-3 rounded-4 bg-primary bg-opacity-10 me-4">
+                    <i class="bi bi-graph-up-arrow text-primary fs-2"></i>
+                </div>
+                <div>
+                    <h1 class="fw-bold mb-1">Yatırım Takip</h1>
+                    <p class="text-muted mb-0">Hisse senedi ve kripto varlıklarınızı Gemini ile analiz edin.</p>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <!-- Portfolio Table -->
+                <div class="col-lg-7">
+                    <div class="glass-card mb-4 h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="fw-bold mb-0">Varlıklarım</h5>
+                            <button class="btn btn-sm btn-primary-glass" @onclick="RefreshQuotes">
+                                <i class="bi bi-arrow-clockwise me-1"></i> Verileri Güncelle
+                            </button>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-glass align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Sembol</th>
+                                        <th>Güncel Fiyat</th>
+                                        <th>Değişim (%)</th>
+                                        <th>Durum</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var stock in _stocks)
+                                    {
+                                        <tr>
+                                            <td class="fw-bold">@stock.Symbol</td>
+                                            <td class="fs-5 fw-bold">@stock.Price.ToString("N2")</td>
+                                            <td class="@(stock.Change >= 0 ? "text-success" : "text-danger")">
+                                                <i class="bi @(stock.Change >= 0 ? "bi-caret-up-fill" : "bi-caret-down-fill")"></i>
+                                                @stock.Change.ToString("N2")%
+                                            </td>
+                                            <td>
+                                                <span class="badge-finance">Aktif</span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="mt-4 p-3 rounded-3 bg-white bg-opacity-5 border border-white border-opacity-10">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <input type="text" class="form-control bg-transparent border-white border-opacity-10 text-white" 
+                                           @bind="_newSymbol" placeholder="Örn: AAPL, BTC-USD, THYAO.IS" />
+                                </div>
+                                <div class="col-md-4">
+                                    <button class="btn btn-outline-primary w-100 h-100" @onclick="AddSymbol">
+                                        <i class="bi bi-plus-lg me-1"></i> Ekle
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Analysis -->
+                <div class="col-lg-5">
+                    <div class="glass-card mb-4 h-100 d-flex flex-column">
+                        <h5 class="fw-bold mb-4 d-flex align-items-center">
+                            <i class="bi bi-stars text-primary me-2"></i> Gemini Portföy Analizi
+                        </h5>
+
+                        @if (_isAnalyzing)
+                        {
+                            <div class="spinner-container flex-grow-1 d-flex flex-column justify-content-center">
+                                <div class="custom-spinner"></div>
+                                <p class="text-muted mt-3">Yapay zeka verileri yorumluyor...</p>
+                            </div>
+                        }
+                        else if (!string.IsNullOrEmpty(_aiAnalysis))
+                        {
+                            <div class="flex-grow-1 animate-fade-in overflow-auto pe-2" style="max-height: 400px;">
+                                <div class="p-3 rounded-4 bg-white bg-opacity-5 border border-white border-opacity-10 mb-3">
+                                    @((MarkupString)_aiAnalysis.Replace("\n", "<br>"))
+                                </div>
+                                <p class="small text-muted"><i class="bi bi-info-circle me-1"></i> Bu analiz yapay zeka tarafından üretilmiştir ve yatırım tavsiyesi değildir.</p>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center py-5 flex-grow-1 d-flex flex-column justify-content-center">
+                                <i class="bi bi-robot text-muted fs-1 mb-3 opacity-25"></i>
+                                <p class="text-muted mb-4 px-4">Portföyünüzün gidişatı hakkında samimi ve anlaşılır bir analiz almak için butona tıklayın.</p>
+                                <button class="btn btn-primary-glass mx-auto" @onclick="AnalyzePortfolio">
+                                    Analiz Üret
+                                </button>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<StockData> _stocks = new();
+    private List<string> _symbols = new() { "AAPL", "BTC-USD", "THYAO.IS", "MSFT" };
+    private string _newSymbol = "";
+    private bool _isAnalyzing = false;
+    private string? _aiAnalysis;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshQuotes();
+    }
+
+    private async Task RefreshQuotes()
+    {
+        _stocks = await InvestmentService.GetStockQuotesAsync(_symbols);
+    }
+
+    private async Task AddSymbol()
+    {
+        if (!string.IsNullOrWhiteSpace(_newSymbol) && !_symbols.Contains(_newSymbol.ToUpper()))
+        {
+            _symbols.Add(_newSymbol.ToUpper());
+            _newSymbol = "";
+            await RefreshQuotes();
+        }
+    }
+
+    private async Task AnalyzePortfolio()
+    {
+        _isAnalyzing = true;
+        _aiAnalysis = null;
+        StateHasChanged();
+
+        try
+        {
+            _aiAnalysis = await GeminiService.AnalyzePortfolioAsync(_stocks);
+        }
+        catch (Exception ex)
+        {
+            _aiAnalysis = $"Hata: {ex.Message}";
+        }
+        finally
+        {
+            _isAnalyzing = false;
+        }
+    }
+}

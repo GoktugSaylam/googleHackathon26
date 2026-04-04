@@ -1,0 +1,154 @@
+:root {
+    --bg-dark: #0f172a;
+    --bg-card: rgba(30, 41, 59, 0.7);
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --accent-primary: #00d1ff;
+    --accent-secondary: #00ff85;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --sidebar-width: 280px;
+    --font-outfit: 'Outfit', sans-serif;
+}
+
+body {
+    background: radial-gradient(circle at top right, #1e293b, #0f172a);
+    color: var(--text-main);
+    font-family: var(--font-outfit);
+    margin: 0;
+    min-height: 100vh;
+}
+
+.main {
+    flex: 1;
+}
+
+/* Glassmorphism Card */
+.glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: 1.5rem;
+    padding: 2rem;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    transition: transform 0.3s ease, border-color 0.3s ease;
+}
+
+.glass-card:hover {
+    border-color: rgba(0, 209, 255, 0.3);
+}
+
+/* Sidebar Styling */
+.sidebar {
+    background: rgba(15, 23, 42, 0.8) !important;
+    backdrop-filter: blur(10px);
+    border-right: 1px solid var(--glass-border);
+    width: var(--sidebar-width);
+}
+
+.nav-link {
+    color: var(--text-muted) !important;
+    border-radius: 0.75rem !important;
+    margin: 0.5rem 1rem !important;
+    transition: all 0.3s ease !important;
+    font-weight: 500;
+}
+
+.nav-link:hover {
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: var(--accent-primary) !important;
+    transform: translateX(5px);
+}
+
+.nav-link.active {
+    background: linear-gradient(90deg, rgba(0, 209, 255, 0.1), transparent) !important;
+    color: var(--accent-primary) !important;
+    border-left: 3px solid var(--accent-primary);
+}
+
+/* Custom Buttons */
+.btn-primary-glass {
+    background: linear-gradient(135deg, var(--accent-primary), #0077ff);
+    border: none;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    box-shadow: 0 4px 15px rgba(0, 209, 255, 0.3);
+    transition: all 0.3s ease;
+}
+
+.btn-primary-glass:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 209, 255, 0.4);
+}
+
+/* Table Styling */
+.table-glass {
+    background: transparent;
+    color: var(--text-main);
+}
+
+.table-glass th {
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    border-bottom: 2px solid var(--glass-border);
+}
+
+.table-glass td {
+    border-bottom: 1px solid var(--glass-border);
+    padding: 1rem 0.75rem;
+}
+
+/* Utilities */
+.text-gradient {
+    background: linear-gradient(to right, var(--accent-primary), var(--accent-secondary));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.badge-finance {
+    background: rgba(0, 255, 133, 0.1);
+    color: var(--accent-secondary);
+    border: 1px solid rgba(0, 255, 133, 0.2);
+    padding: 0.25rem 0.75rem;
+    border-radius: 2rem;
+    font-size: 0.8rem;
+}
+
+/* Spinner Overlay */
+.spinner-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 2rem;
+}
+
+.custom-spinner {
+    width: 3rem;
+    height: 3rem;
+    border: 3px solid var(--glass-border);
+    border-top: 3px solid var(--accent-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.6s ease forwards;
+}

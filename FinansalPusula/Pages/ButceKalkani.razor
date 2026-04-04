@@ -1,0 +1,119 @@
+@page "/butce-kalkani"
+@using FinansalPusula.Services
+@inject BudgetService BudgetService
+
+<PageTitle>Bütçe Kalkanı - Finansal Pusula</PageTitle>
+
+<div class="container-fluid animate-fade-in">
+    <div class="row">
+        <div class="col-xl-10 offset-xl-1">
+            <div class="d-flex align-items-center mb-5 mt-4">
+                <div class="p-3 rounded-4 bg-primary bg-opacity-10 me-4">
+                    <i class="bi bi-shield-lock text-primary fs-2"></i>
+                </div>
+                <div>
+                    <h1 class="fw-bold mb-1">Bütçe Kalkanı</h1>
+                    <p class="text-muted mb-0">Paranızın enflasyon karşısındaki gücünü takip edin ve önleminizi alın.</p>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <!-- Inputs Section -->
+                <div class="col-lg-4">
+                    <div class="glass-card mb-4 h-100">
+                        <h5 class="fw-bold mb-4">Finansal Veriler</h5>
+                        
+                        <div class="mb-4">
+                            <label class="form-label text-muted small text-uppercase fw-bold">Aylık Net Maaş</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-transparent border-white border-opacity-10 text-muted">₺</span>
+                                <input type="number" class="form-control bg-transparent border-white border-opacity-10 text-white" 
+                                       @bind="BudgetService.MonthlySalary" @bind:event="oninput" />
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label text-muted small text-uppercase fw-bold">Yıllık Enflasyon (%)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-transparent border-white border-opacity-10 text-muted">%</span>
+                                <input type="number" class="form-control bg-transparent border-white border-opacity-10 text-white" 
+                                       @bind="BudgetService.AnnualInflationRate" @bind:event="oninput" />
+                            </div>
+                        </div>
+
+                        <div class="p-3 rounded-3 bg-white bg-opacity-5 border border-white border-opacity-10">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted small">Son Harcama (Sprint 1)</span>
+                                <span class="fw-bold">@BudgetService.LastReport?.TotalSpending.ToString("C2")</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted small">Boşta Duran Nakit</span>
+                                <span class="text-primary fw-bold">@BudgetService.CurrentIdleCash.ToString("C2")</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analysis Section -->
+                <div class="col-lg-8">
+                    @if (BudgetService.CurrentIdleCash > 0)
+                    {
+                        <!-- Erosion Panel -->
+                        <div class="glass-card mb-4 border-danger border-opacity-20 position-relative overflow-hidden" 
+                             style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(30, 41, 59, 0.7));">
+                            
+                            <div class="position-absolute top-0 end-0 p-4 opacity-10">
+                                <i class="bi bi-fire" style="font-size: 8rem;"></i>
+                            </div>
+
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <h4 class="text-danger fw-bold mb-3 d-flex align-items-center">
+                                        <i class="bi bi-lightning-charge-fill me-2"></i> Paran Her Ay Eriyor!
+                                    </h4>
+                                    <p class="lead text-white opacity-75 mb-4">
+                                        Seçtiğiniz enflasyon oranına göre, şu an bankada boştaki paranız her ay 
+                                        değerini kaybediyor.
+                                    </p>
+                                    
+                                    <div class="display-5 fw-bold text-white mb-2">
+                                        - @BudgetService.CalculateMonthlyErosion().ToString("C2")
+                                        <span class="fs-4 fw-normal text-muted">/ ay</span>
+                                    </div>
+                                    <div class="text-muted">
+                                        Yıllık tahmini değer kaybı: <span class="text-danger fw-bold">@BudgetService.CalculateProjectedAnnualLoss().ToString("C2")</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Protection Tip -->
+                        <div class="glass-card mb-4 border-success border-opacity-20"
+                             style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.05), rgba(30, 41, 59, 0.7));">
+                            <h5 class="text-success fw-bold mb-3">
+                                <i class="bi bi-shield-check me-2"></i> Bütçe Kalkanı Önerisi
+                            </h5>
+                            <p class="mb-0 text-muted">
+                                Paranızı enflasyona karşı korumak için <strong>@BudgetService.CalculateMonthlyErosion().ToString("C2")</strong> 
+                                üzerindeki bir getiri oranına sahip yatırım araçlarını (Hisse, Fon, Altın) değerlendirmelisiniz. 
+                                <br/><small>Sprint 3'te bu yatırımları birlikte takip edeceğiz!</small>
+                            </p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="glass-card text-center py-5">
+                            <i class="bi bi-info-circle text-muted fs-1 mb-3"></i>
+                            <h4>Hesaplama Yapılamadı</h4>
+                            <p class="text-muted">Maaş tutarı harcamalarınızdan az veya henüz harcama verisi girilmemiş.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    // Logic is handled via BudgetService properties
+}

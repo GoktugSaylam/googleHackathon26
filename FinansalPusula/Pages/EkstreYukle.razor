@@ -1,0 +1,220 @@
+@page "/ekstre-yukle"
+@using FinansalPusula.Services
+@inject VisionApiService VisionService
+@inject GeminiService GeminiService
+@inject BudgetService BudgetService
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
+
+<PageTitle>Ekstre Yükle - Finansal Pusula</PageTitle>
+
+<div class="container-fluid animate-fade-in">
+    <div class="row">
+        <div class="col-xl-8 offset-xl-2">
+            
+            <div class="d-flex align-items-center mb-5 mt-4">
+                <div class="p-3 rounded-4 bg-primary bg-opacity-10 me-4">
+                    <i class="bi bi-receipt-cutoff text-primary fs-2"></i>
+                </div>
+                <div>
+                    <h1 class="fw-bold mb-1">Gider ve Ekstre Analizi</h1>
+                    <p class="text-muted mb-0">Yapay zeka desteği ile harcamalarınızı saniyeler içinde dijitalleştirin.</p>
+                </div>
+            </div>
+
+            <div class="glass-card mb-5">
+                <div class="row align-items-center">
+                    <div class="col-md-7">
+                        <h4 class="fw-bold mb-3 text-white">Yeni Belge Yükle</h4>
+                        <p class="text-white text-opacity-75 mb-4">Banka ekstresi, market fişi veya faturalarınızı (JPEG, PNG, PDF) buraya yükleyerek analizi başlatın.</p>
+                        
+                        <div class="mb-4">
+                            <label class="btn btn-primary-glass w-100 py-3 cursor-pointer">
+                                <i class="bi bi-cloud-arrow-up me-2"></i> Dosya Seçin
+                                <InputFile OnChange="HandleFileSelected" class="d-none" accept=".jpg,.jpeg,.png,.pdf" />
+                            </label>
+                        </div>
+                        
+                        <div class="d-flex gap-3">
+                            <span class="badge-finance"><i class="bi bi-check2-circle me-1"></i> OCR Desteği</span>
+                            <span class="badge-finance"><i class="bi bi-check2-circle me-1"></i> Gemini 1.5 Flash</span>
+                        </div>
+                    </div>
+                    <div class="col-md-5 d-none d-md-block text-center border-start border-white border-opacity-10">
+                        <i class="bi bi-file-earmark-text text-primary opacity-25" style="font-size: 8rem;"></i>
+                    </div>
+                </div>
+            </div>
+
+            @if (_isProcessing)
+            {
+                <div class="glass-card mb-5 animate-fade-in">
+                    <div class="spinner-container">
+                        <div class="custom-spinner"></div>
+                        <h5 class="fw-bold mt-2">@_statusMessage</h5>
+                        <p class="text-muted small">Lütfen bekleyin, verileriniz işleniyor...</p>
+                    </div>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <div class="alert bg-danger bg-opacity-10 border border-danger border-opacity-20 text-danger rounded-4 p-4 animate-fade-in" role="alert">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-exclamation-triangle-fill me-3 fs-4"></i>
+                        <div>
+                            <h6 class="fw-bold mb-1">Bir Hata Oluştu</h6>
+                            <span>@_errorMessage</span>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (_report != null)
+            {
+                <div class="animate-fade-in">
+                    <!-- Summary Card -->
+                    <div class="glass-card mb-4 overflow-hidden position-relative">
+                        <div class="position-absolute top-0 end-0 p-4 opacity-10">
+                            <i class="bi bi-stars" style="font-size: 10rem;"></i>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-8">
+                                <span class="badge bg-primary bg-opacity-25 text-primary mb-3 px-3 py-2 rounded-3">Yapay Zeka Özeti</span>
+                                <h3 class="fw-bold mb-3">Finansal Danışman Notu</h3>
+                                <p class="lead text-main opacity-75">@_report.SummaryAdvice</p>
+                            </div>
+                            <div class="col-md-4 text-md-end mt-4 mt-md-0 d-flex flex-column justify-content-center">
+                                <small class="text-muted text-uppercase fw-bold letter-spacing-1">Toplam Harcama</small>
+                                <h1 class="fw-bold text-gradient mb-0">@_report.TotalSpending.ToString("C2")</h1>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (_report.Subscriptions?.Any() == true)
+                    {
+                        <div class="glass-card mb-4 border-warning border-opacity-20">
+                            <h5 class="fw-bold mb-4 d-flex align-items-center">
+                                <i class="bi bi-arrow-repeat text-warning me-2"></i> Aktif Abonelikler
+                            </h5>
+                            <div class="table-responsive">
+                                <table class="table table-glass align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>Hizmet</th>
+                                            <th>Maliyet</th>
+                                            <th>Alternatif Öneri</th>
+                                            <th>Tasarruf Tavsiyesi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var sub in _report.Subscriptions)
+                                        {
+                                            <tr>
+                                                <td class="fw-bold">@sub.Name</td>
+                                                <td>@sub.Cost.ToString("C2")</td>
+                                                <td><span class="text-primary fw-medium">@sub.Alternative</span></td>
+                                                <td class="text-muted small">@sub.SavingsAdvice</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    }
+
+                    <div class="glass-card mb-5">
+                        <h5 class="fw-bold mb-4 d-flex align-items-center">
+                            <i class="bi bi-list-check text-primary me-2"></i> Harcama Detayları
+                        </h5>
+                        <div class="table-responsive">
+                            <table class="table table-glass">
+                                <thead>
+                                    <tr>
+                                        <th>Tarih</th>
+                                        <th>Mağaza/Firma</th>
+                                        <th>Kategori</th>
+                                        <th class="text-end">Tutar</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (_report.Expenses != null)
+                                    {
+                                        @foreach (var item in _report.Expenses)
+                                        {
+                                            <tr>
+                                                <td class="text-muted">@item.Date</td>
+                                                <td class="fw-medium">@item.Merchant</td>
+                                                <td><span class="badge-finance">@item.Category</span></td>
+                                                <td class="text-end fw-bold">@item.Amount.ToString("C2")</td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool _isProcessing = false;
+    private string _statusMessage = "";
+    private string? _errorMessage;
+    private ExpenseReport? _report;
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        _isProcessing = true;
+        _errorMessage = null;
+        _report = null;
+
+        try
+        {
+            var file = e.File;
+            if (file == null) return;
+
+            if (file.Size > 10 * 1024 * 1024)
+            {
+                _errorMessage = "Dosya boyutu çok büyük (Max 10MB).";
+                return;
+            }
+
+            _statusMessage = "Dosya okunuyor...";
+            using var stream = file.OpenReadStream(10 * 1024 * 1024);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            var fileBytes = ms.ToArray();
+
+            _statusMessage = "Metin taranıyor...";
+            var ocrText = await VisionService.ExtractTextAsync(fileBytes);
+
+            if (string.IsNullOrWhiteSpace(ocrText))
+            {
+                _errorMessage = "Görselden metin okunamadı.";
+                return;
+            }
+
+            _statusMessage = "Yapay zeka analiz ediyor...";
+            _report = await GeminiService.AnalyzeExpensesAsync(ocrText);
+            BudgetService.LastReport = _report;
+
+            if (_report == null)
+            {
+                _errorMessage = "Analiz sonuçları işlenemedi.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Beklenmedik bir hata oluştu: {ex.Message}";
+        }
+        finally
+        {
+            _isProcessing = false;
+            _statusMessage = "";
+        }
+    }
+}

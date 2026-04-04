@@ -1,0 +1,20 @@
+@inherits LayoutComponentBase
+
+<div class="page overflow-hidden">
+    <div class="sidebar shrink-0 h-screen sticky top-0">
+        <NavMenu />
+    </div>
+
+    <main class="flex-1 overflow-y-auto h-screen">
+        <div class="px-4 py-3 d-flex justify-content-end border-bottom border-secondary border-opacity-10 mb-4 h-16 align-items-center">
+            <span class="text-muted d-none d-sm-inline me-3">GDG Hackathon 24h</span>
+            <div class="rounded-circle bg-primary bg-opacity-10 p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                <i class="bi bi-person text-primary"></i>
+            </div>
+        </div>
+
+        <article class="content px-4 pb-5 animate-fade-in">
+            @Body
+        </article>
+    </main>
+</div>
