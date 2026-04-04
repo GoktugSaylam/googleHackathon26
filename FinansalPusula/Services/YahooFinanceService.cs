@@ -176,16 +176,26 @@ public class YahooFinanceService : IYahooFinanceService
     private static decimal ParseClosePrice(string json)
     {
         using var doc = JsonDocument.Parse(json);
-        var result = doc.RootElement.GetProperty("chart").GetProperty("result")[0];
-
-        if (result.TryGetProperty("indicators", out var ind) &&
-            ind.TryGetProperty("quote", out var qa) && qa.GetArrayLength() > 0)
+        
+        // Sunucu tarafından önceden işlenmiş (Raw Price) formatı kontrolü
+        if (doc.RootElement.TryGetProperty("price", out var p) && p.ValueKind != JsonValueKind.Null)
         {
-            var q = qa[0];
-            if (q.TryGetProperty("close", out var ca))
-                foreach (var item in ca.EnumerateArray())
-                    if (item.ValueKind != JsonValueKind.Null)
-                        return item.GetDecimal();
+            return p.GetDecimal();
+        }
+
+        // Klasik Yahoo JSON Parse
+        if (doc.RootElement.TryGetProperty("chart", out var chart))
+        {
+            var result = chart.GetProperty("result")[0];
+            if (result.TryGetProperty("indicators", out var ind) &&
+                ind.TryGetProperty("quote", out var qa) && qa.GetArrayLength() > 0)
+            {
+                var q = qa[0];
+                if (q.TryGetProperty("close", out var ca))
+                    foreach (var item in ca.EnumerateArray())
+                        if (item.ValueKind != JsonValueKind.Null)
+                            return item.GetDecimal();
+            }
         }
 
         return ParseRegularMarketPrice(json);

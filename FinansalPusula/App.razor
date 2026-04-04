@@ -1,39 +1,12 @@
-﻿@inject NavigationManager Navigation
-
-<CascadingAuthenticationState>
-    <Router AppAssembly="@typeof(App).Assembly">
-        <Found Context="routeData">
-            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
-                <NotAuthorized>
-                    <RedirectToLogin />
-                </NotAuthorized>
-                <Authorizing>
-                    <LayoutView Layout="@typeof(EmptyLayout)">
-                        <div class="min-vh-100 d-flex flex-column justify-content-center align-items-center text-center px-4">
-                            <div class="custom-spinner mb-3"></div>
-                            <h4 class="fw-bold mb-2">Hesabın Doğrulanıyor</h4>
-                            <p class="text-muted mb-0">Lütfen bekle, güvenli oturum açılıyor.</p>
-                            <button type="button" class="btn btn-link text-info mt-2 text-decoration-none" @onclick="OpenLogin">
-                                Uzun sürdüyse giriş ekranına dön
-                            </button>
-                        </div>
-                    </LayoutView>
-                </Authorizing>
-            </AuthorizeRouteView>
-            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
-        </Found>
-        <NotFound>
-            <PageTitle>Not found</PageTitle>
-            <LayoutView Layout="@typeof(MainLayout)">
-                <p role="alert">Sorry, there's nothing at this address.</p>
-            </LayoutView>
-        </NotFound>
-    </Router>
-</CascadingAuthenticationState>
-
-@code {
-    private void OpenLogin()
-    {
-        Navigation.NavigateTo("/login", forceLoad: true);
-    }
-}
+<Router AppAssembly="@typeof(App).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <PageTitle>Not found</PageTitle>
+        <LayoutView Layout="@typeof(MainLayout)">
+            <p role="alert">Sorry, there's nothing at this address.</p>
+        </LayoutView>
+    </NotFound>
+</Router>
