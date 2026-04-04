@@ -59,17 +59,24 @@
                         </div>
 
                         <div class="mt-4 p-3 rounded-3 bg-white bg-opacity-5 border border-white border-opacity-10">
-                            <div class="row">
-                                <div class="col-md-8">
+                            <p class="text-muted small mb-2"><i class="bi bi-info-circle me-1"></i> Sadece Borsa İstanbul (BIST) hisselerini takip edebilirsiniz.</p>
+                            <div class="row g-2">
+                                <div class="col-md-9">
                                     <input type="text" class="form-control bg-transparent border-white border-opacity-10 text-white" 
-                                           @bind="_newSymbol" placeholder="Örn: AAPL, BTC-USD, THYAO.IS" />
+                                           @bind="_newSymbol" placeholder="Hisse Kodu (Örn: THYAO.IS)" />
                                 </div>
-                                <div class="col-md-4">
-                                    <button class="btn btn-outline-primary w-100 h-100" @onclick="AddSymbol">
-                                        <i class="bi bi-plus-lg me-1"></i> Ekle
+                                <div class="col-md-3">
+                                    <button class="btn btn-primary-glass w-100" @onclick="AddSymbol">
+                                        <i class="bi bi-plus-lg"></i> Ekle
                                     </button>
                                 </div>
                             </div>
+                            @if (!string.IsNullOrEmpty(_symbolError))
+                            {
+                                <div class="text-danger small mt-2 animate-fade-in">
+                                    <i class="bi bi-exclamation-circle me-1"></i> @_symbolError
+                                </div>
+                            }
                         </div>
                     </div>
                 </div>
@@ -116,8 +123,9 @@
 
 @code {
     private List<StockData> _stocks = new();
-    private List<string> _symbols = new() { "AAPL", "BTC-USD", "THYAO.IS", "MSFT" };
+    private List<string> _symbols = new() { "THYAO.IS", "EREGL.IS", "SASA.IS", "TUPRS.IS" };
     private string _newSymbol = "";
+    private string? _symbolError;
     private bool _isAnalyzing = false;
     private string? _aiAnalysis;
 
@@ -133,12 +141,27 @@
 
     private async Task AddSymbol()
     {
-        if (!string.IsNullOrWhiteSpace(_newSymbol) && !_symbols.Contains(_newSymbol.ToUpper()))
+        _symbolError = null;
+        if (string.IsNullOrWhiteSpace(_newSymbol)) return;
+
+        var upper = _newSymbol.ToUpper();
+        
+        if (!InvestmentService.IsValidBistSymbol(upper))
         {
-            _symbols.Add(_newSymbol.ToUpper());
-            _newSymbol = "";
-            await RefreshQuotes();
+            _symbolError = "Lütfen geçerli bir BIST sembolü girin (Örn: THYAO.IS).";
+            return;
         }
+
+        if (_symbols.Contains(upper))
+        {
+            _symbolError = "Bu sembol zaten ekli.";
+            return;
+        }
+
+        _symbols.Add(upper);
+        _newSymbol = "";
+        await RefreshQuotes();
+        StateHasChanged();
     }
 
     private async Task AnalyzePortfolio()

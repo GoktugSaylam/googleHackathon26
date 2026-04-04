@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("FinansalPusula")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+266d6789bf36a6868faa3989fb9c1a8de99b66f3")]
 [assembly: System.Reflection.AssemblyProductAttribute("FinansalPusula")]
 [assembly: System.Reflection.AssemblyTitleAttribute("FinansalPusula")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

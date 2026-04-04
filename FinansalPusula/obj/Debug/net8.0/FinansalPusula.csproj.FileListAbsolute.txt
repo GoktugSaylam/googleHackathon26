@@ -1,9 +1,3 @@
-D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\FinansalPusula.csproj.AssemblyReference.cache
-D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\FinansalPusula.GeneratedMSBuildEditorConfig.editorconfig
-D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\FinansalPusula.AssemblyInfoInputs.cache
-D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\FinansalPusula.AssemblyInfo.cs
-D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\FinansalPusula.csproj.CoreCompileInputs.cache
-D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\FinansalPusula.MvcApplicationPartsAssemblyInfo.cache
 D:\Hackhaton\googleHackathon26\FinansalPusula\bin\Debug\net8.0\wwwroot\_framework\blazor.boot.json
 D:\Hackhaton\googleHackathon26\FinansalPusula\bin\Debug\net8.0\wwwroot\_framework\blazor.webassembly.js
 D:\Hackhaton\googleHackathon26\FinansalPusula\bin\Debug\net8.0\wwwroot\_framework\dotnet.js
@@ -621,6 +615,13 @@ D:\Hackhaton\googleHackathon26\FinansalPusula\bin\Debug\net8.0\icudt_CJK.dat
 D:\Hackhaton\googleHackathon26\FinansalPusula\bin\Debug\net8.0\icudt_EFIGS.dat
 D:\Hackhaton\googleHackathon26\FinansalPusula\bin\Debug\net8.0\icudt_no_CJK.dat
 D:\Hackhaton\googleHackathon26\FinansalPusula\bin\Debug\net8.0\emcc-props.json
+D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\FinansalPusula.csproj.AssemblyReference.cache
+D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\FinansalPusula.GeneratedMSBuildEditorConfig.editorconfig
+D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\FinansalPusula.AssemblyInfoInputs.cache
+D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\FinansalPusula.AssemblyInfo.cs
+D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\FinansalPusula.csproj.CoreCompileInputs.cache
+D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\FinansalPusula.MvcApplicationPartsAssemblyInfo.cache
+D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\FinansalPusula.sourcelink.json
 D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\webcil\Microsoft.AspNetCore.Authorization.wasm
 D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\webcil\Microsoft.AspNetCore.Components.wasm
 D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\webcil\Microsoft.AspNetCore.Components.Forms.wasm
@@ -1023,6 +1024,9 @@ D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\compressed\c89z8d
 D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\compressed\cx824hbyjb-tptq2av103.gz
 D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\compressed\conhmcjb3m-lfu7j35m59.gz
 D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\compressed\so0wmqvf3u-oyz0vx2fzb.gz
+D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\compressed\o45d2xaq4v-j3hcjiqr1v.gz
+D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\compressed\da72g1jh3z-3dzdpt0uir.gz
+D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\compressed\zsskahf6ff-6aoew35907.gz
 D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\staticwebassets.build.json
 D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\staticwebassets.development.json
 D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\staticwebassets.build.endpoints.json
@@ -1037,6 +1041,3 @@ D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\FinansalPusula.dl
 D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\refint\FinansalPusula.dll
 D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\FinansalPusula.pdb
 D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\ref\FinansalPusula.dll
-D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\compressed\o45d2xaq4v-pab5x6dyyf.gz
-D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\compressed\da72g1jh3z-pfcrzondzn.gz
-D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\compressed\zsskahf6ff-f9kuncslhm.gz

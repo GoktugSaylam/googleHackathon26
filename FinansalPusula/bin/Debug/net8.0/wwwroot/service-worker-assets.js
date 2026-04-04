@@ -1,16 +1,16 @@
 self.assetsManifest = {
-  "version": "OB0r8WEF",
+  "version": "4So/Qhlg",
   "assets": [
     {
       "hash": "sha256-Q5fOnsfuKbRn3Uy3KGsQ7lrN+Yv4idAE+xj/OCd4tLk=",
       "url": "FinansalPusula.styles.css"
     },
     {
-      "hash": "sha256-tYqmH7JUtrU8lCtSLEvg8JpSBHwM7YrNE5hs0vu6U9E=",
+      "hash": "sha256-uT6HmAoLoZTcp10BKUrWiRgDXtOVlvapqyA0czfI5Lk=",
       "url": "_framework/FinansalPusula.pdb"
     },
     {
-      "hash": "sha256-j06IkTut7+LcmrTsrfW8d2q47+Ig+0wgPvCUTsFt+x4=",
+      "hash": "sha256-cUN7OjCrgTGvHgLrITybfhC/ghbcN8MrFtCITNOUF1c=",
       "url": "_framework/FinansalPusula.wasm"
     },
     {
@@ -770,7 +770,7 @@ self.assetsManifest = {
       "url": "_framework/WindowsBase.wasm"
     },
     {
-      "hash": "sha256-E+ksngioVs476WcNHE9qqNW5o9CbDryntYEvl+GDkKg=",
+      "hash": "sha256-kvFZC1IKnL+GpG5AvE1gbVvLCWT9s2G7QkxyOejV5jg=",
       "url": "_framework/blazor.boot.json"
     },
     {
