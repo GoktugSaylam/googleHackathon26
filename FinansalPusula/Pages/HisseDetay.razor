@@ -250,6 +250,7 @@
         // Fiyat Grafiği Hazırlığı
         var labels = _simResult.DailyPoints.Select(p => p.Date.ToString("MM/yy")).ToList();
         var prices = _simResult.DailyPoints.Select(p => p.PriceTL).ToList();
+        var values = _simResult.DailyPoints.Select(p => p.PorfolyoDegeriTL).ToList();
 
         var priceConfig = new
         {
@@ -258,25 +259,57 @@
                 labels = labels,
                 datasets = new[] {
                     new {
-                        label = "Fiyat (₺)",
+                        label = "Hisse Fiyatı (₺)",
                         data = prices,
                         borderColor = "#00d2ff",
                         backgroundColor = "rgba(0, 210, 255, 0.1)",
-                        fill = true,
+                        fill = false,
                         tension = 0.4,
+                        borderWidth = 3,
+                        pointRadius = 0,
+                        yAxisID = "y"
+                    },
+                    new {
+                        label = "Portföy Değeri (₺)",
+                        data = values,
+                        borderColor = "#ff9f43",
+                        backgroundColor = "rgba(255, 159, 67, 0.1)",
+                        fill = true,
+                        tension = 0.3,
                         borderWidth = 2,
-                        pointRadius = 0
+                        pointRadius = 0,
+                        yAxisID = "y1"
                     }
                 }
             },
             options = new {
                 responsive = true,
                 maintainAspectRatio = false,
+                interaction = new { mode = "index", intersect = false },
                 scales = new {
-                    y = new { grid = new { color = "rgba(255,255,255,0.05)" }, ticks = new { color = "#ffffff80" } },
-                    x = new { grid = new { display = false }, ticks = new { color = "#ffffff80", maxTicksLimit = 12 } }
+                    y = new { 
+                        display = true, 
+                        position = "left",
+                        grid = new { color = "rgba(255,255,255,0.05)" }, 
+                        ticks = new { color = "#00d2ff80" },
+                        title = new { display = true, text = "Hisse Fiyatı", color = "#00d2ff" }
+                    },
+                    y1 = new { 
+                        display = true, 
+                        position = "right",
+                        grid = new { drawOnChartArea = false }, 
+                        ticks = new { color = "#ff9f4380" },
+                        title = new { display = true, text = "Yatırım Değeri", color = "#ff9f43" }
+                    },
+                    x = new { 
+                        grid = new { display = false }, 
+                        ticks = new { color = "#ffffff80", maxTicksLimit = 12 } 
+                    }
                 },
-                plugins = new { legend = new { display = false } }
+                plugins = new { 
+                    legend = new { display = true, labels = new { color = "white", font = new { family = "Outfit" } } },
+                    tooltip = new { enabled = true }
+                }
             }
         };
 

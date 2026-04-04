@@ -115,7 +115,13 @@ public static class PortfolioSimulator
                     LotsBought = 0
                 });
             }
+
+            // 5. Günlük Değeri Kaydet
+            day.PorfolyoDegeriTL = currentLots * day.PriceTL;
         }
+
+        // Simülasyon sonrası DailyPoints'i relevantHistory olarak güncelle (grafik için anlamlı periyot)
+        result.DailyPoints = relevantHistory;
 
         // Final Metrikler
         result.TotalLots = Math.Round(currentLots, 3);

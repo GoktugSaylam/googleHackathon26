@@ -188,6 +188,76 @@ app.MapGet("/api/stock/range/{symbol}", async (string symbol, string from, strin
             return Results.NotFound(new { error = "Veri bulunamadı." });
 
         var json = await response.Content.ReadAsStringAsync();
+
+        // --- Split Reversal (Ham Fiyat Düzeltme) Mantığı ---
+        try
+        {
+            // Tüm bölünmeleri çek
+            var splitUrl = $"https://query2.finance.yahoo.com/v8/finance/chart/{formattedSymbol}?interval=1mo&events=split&range=max&includeAdjustedClose=false";
+            var splitResponse = await client.GetAsync(splitUrl);
+            if (splitResponse.IsSuccessStatusCode)
+            {
+                var splitJson = await splitResponse.Content.ReadAsStringAsync();
+                using var splitDoc = System.Text.Json.JsonDocument.Parse(splitJson);
+                var splitResultNode = splitDoc.RootElement.GetProperty("chart").GetProperty("result")[0];
+                
+                var allSplits = new List<(long Date, decimal Factor)>();
+                if (splitResultNode.TryGetProperty("events", out var eventsNode) && eventsNode.TryGetProperty("splits", out var splitsObj))
+                {
+                    foreach (var s in splitsObj.EnumerateObject())
+                    {
+                        var sValue = s.Value;
+                        var sDateUnix = sValue.GetProperty("date").GetInt64();
+                        var num = sValue.GetProperty("numerator").GetDecimal();
+                        var den = sValue.GetProperty("denominator").GetDecimal();
+                        if (den > 0) allSplits.Add((sDateUnix, num / den));
+                    }
+                }
+
+                if (allSplits.Count > 0)
+                {
+                    // Chart JSON'u düzenlenebilir hale getir
+                    var options = new System.Text.Json.JsonSerializerOptions { WriteIndented = false };
+                    var doc = System.Text.Json.Nodes.JsonNode.Parse(json);
+                    var resultNode = doc?["chart"]?["result"]?[0];
+                    var timestamps = resultNode?["timestamp"]?.AsArray();
+                    var closes = resultNode?["indicators"]?["quote"]?[0]?["close"]?.AsArray();
+
+                    if (timestamps != null && closes != null)
+                    {
+                        for (int i = 0; i < timestamps.Count; i++)
+                        {
+                            if (closes[i] == null || closes[i]!.GetValueKind() == System.Text.Json.JsonValueKind.Null) continue;
+                            
+                            var ts = timestamps[i]!.GetValue<long>();
+                            var price = closes[i]!.GetValue<decimal>();
+                            
+                            // Bu veri noktasından SONRA gerçekleşen tüm bölünmeleri bul ve fiyatı geri çarparak "un-adjust" et
+                            decimal cumulativeFactor = 1.0m;
+                            foreach (var s in allSplits)
+                            {
+                                if (s.Date > ts + 86400) // 1 gün marj
+                                {
+                                    cumulativeFactor *= s.Factor;
+                                }
+                            }
+
+                            if (cumulativeFactor != 1.0m)
+                            {
+                                closes[i] = price * cumulativeFactor;
+                            }
+                        }
+                        json = doc!.ToJsonString(options);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Backend] Split reversal hatası: {ex.Message}");
+            // Hata olsa bile dokunulmamış veriyi döndür (tolerable failure)
+        }
+
         return Results.Content(json, "application/json");
     }
     catch (Exception ex)

@@ -83,6 +83,7 @@ public class HistoricalDataPoint
     public DateTime Date { get; set; }
     public decimal PriceTL { get; set; }
     public decimal PriceUSD { get; set; }
+    public decimal PorfolyoDegeriTL { get; set; }
 }
 
 public class SimulationResult
