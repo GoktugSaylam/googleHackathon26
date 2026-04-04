@@ -14,5 +14,7 @@ builder.Services.AddScoped<VisionApiService>();
 builder.Services.AddScoped<GeminiService>();
 builder.Services.AddScoped<BudgetService>();
 builder.Services.AddScoped<InvestmentService>();
+builder.Services.AddScoped<PortfolioService>();
+builder.Services.AddScoped<YahooFinanceService>();
 
 await builder.Build().RunAsync();

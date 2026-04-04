@@ -35,7 +35,38 @@ public class StockDetail
 
 // --- Yeni Simülasyon ve İşlem Modelleri ---
 
-public enum TransactionType { Buy, Sell }
+public enum TransactionType 
+{ 
+    Buy = 0, Alis = 0, 
+    Sell = 1, Satis = 1, 
+    Temettu = 2, 
+    Bolunme = 3 
+}
+
+public class PortfolioTransaction
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public DateTime Tarih { get; set; } = DateTime.Now;
+    public TransactionType IslemTipi { get; set; } = TransactionType.Alis;
+    public string Sembol { get; set; } = string.Empty;
+    public decimal Adet { get; set; }
+    public decimal BirimFiyat { get; set; }
+    public decimal ToplamTutar => Adet * BirimFiyat;
+}
+
+public class StockDetailMetrics
+{
+    public string Sembol { get; set; } = string.Empty;
+    public decimal ToplamYatirimTL { get; set; }
+    public decimal ToplamYatirimUSD { get; set; }
+    public decimal OrtalamMaliyetLot { get; set; }
+    public decimal GuncelDeger { get; set; }
+    public decimal ToplamLot { get; set; }
+    public decimal DRIPLot { get; set; }
+    public decimal ToplamTemettu { get; set; }
+    public decimal SMA50 { get; set; }
+    public decimal SMA200 { get; set; }
+}
 
 public class TransactionRecord
 {

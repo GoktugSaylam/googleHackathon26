@@ -1,61 +1,69 @@
 @page "/islemler"
 @using FinansalPusula.Services
-@inject InvestmentService InvestmentService
+@inject YahooFinanceService YahooService
+@inject PortfolioService PortfolioService
+@inject NavigationManager NavManager
 
-<PageTitle>İşlemler - Finansal Pusula</PageTitle>
+<PageTitle>İşlemler - HisseMetre</PageTitle>
 
-<div class="container-fluid animate-fade-in">
+<div class="container-fluid animate-fade-in p-4">
     <div class="row">
         <div class="col-xl-10 mx-auto">
-            <div class="d-flex justify-content-between align-items-center mb-5 mt-4">
+            <!-- Başlık ve Ekle Butonu -->
+            <div class="d-flex justify-content-between align-items-center mb-5">
                 <div>
-                    <h2 class="fw-bold mb-1">Portföy İşlemleri</h2>
-                    <p class="text-muted mb-0">Hisse alım ve satım kayıtlarınızı yönetin.</p>
+                    <h1 class="fw-bold mb-1 text-gradient">Portföy İşlemleri</h1>
+                    <p class="text-muted mb-0">Geçmişe dönük alım ve satım kayıtlarınızı yönetin.</p>
                 </div>
                 <button class="btn btn-primary-glass px-4" @onclick="OpenAddModal">
                     <i class="bi bi-plus-lg me-2"></i> Yeni İşlem Ekle
                 </button>
             </div>
 
-            <div class="glass-card">
+            <!-- İşlem Listesi Tablosu -->
+            <div class="glass-card p-0 overflow-hidden">
                 <div class="table-responsive">
-                    <table class="table table-glass align-middle">
+                    <table class="table table-glass align-middle mb-0">
                         <thead>
                             <tr>
-                                <th>Tarih</th>
+                                <th class="ps-4">Tarih</th>
                                 <th>Hisse</th>
                                 <th>Tip</th>
-                                <th class="text-end">Miktar (Lot)</th>
+                                <th class="text-end">Adet (Lot)</th>
                                 <th class="text-end">Birim Fiyat</th>
                                 <th class="text-end">Toplam Tutar</th>
-                                <th class="text-center">İşlem</th>
+                                <th class="text-center pe-4">İşlem</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @if (!InvestmentService.Transactions.Any())
+                            @if (!_transactions.Any())
                             {
                                 <tr>
-                                    <td colspan="7" class="text-center py-5 text-muted">
-                                        Henüz bir işlem kaydı bulunmuyor.
+                                    <td colspan="7" class="text-center py-5">
+                                        <div class="opacity-25 mb-3">
+                                            <i class="bi bi-journal-text fs-1"></i>
+                                        </div>
+                                        <p class="text-muted">Henüz kayıtlı bir işlem bulunmuyor.</p>
                                     </td>
                                 </tr>
                             }
-                            @foreach (var tx in InvestmentService.Transactions.OrderByDescending(t => t.Date))
+                            @foreach (var tx in _transactions.OrderByDescending(t => t.Tarih))
                             {
                                 <tr>
-                                    <td>@tx.Date.ToShortDateString()</td>
-                                    <td class="fw-bold text-primary">@tx.Symbol</td>
+                                    <td class="ps-4">@tx.Tarih.ToString("dd.MM.yyyy")</td>
+                                    <td class="fw-bold text-gradient">@tx.Sembol</td>
                                     <td>
-                                        <span class="badge @(tx.Type == TransactionType.Buy ? "bg-success" : "bg-danger") bg-opacity-10 @(tx.Type == TransactionType.Buy ? "text-success" : "text-danger") px-3">
-                                            @(tx.Type == TransactionType.Buy ? "ALIM" : "SATIM")
+                                        <span class="badge @GetBadgeClass(tx.IslemTipi) px-3 py-2">
+                                            @(tx.IslemTipi == TransactionType.Alis ? "ALIŞ" : "SATIŞ")
                                         </span>
                                     </td>
-                                    <td class="text-end">@tx.Quantity.ToString("N0")</td>
-                                    <td class="text-end">@tx.Price.ToString("N2") ₺</td>
-                                    <td class="text-end fw-bold">@((tx.Quantity * tx.Price).ToString("N2")) ₺</td>
-                                    <td class="text-center">
-                                        <button class="btn btn-sm btn-link text-danger" @onclick="() => DeleteTransaction(tx.Id)">
-                                            <i class="bi bi-trash"></i>
+                                    <td class="text-end">@tx.Adet.ToString("N0")</td>
+                                    <td class="text-end">₺@tx.BirimFiyat.ToString("N2")</td>
+                                    <td class="text-end fw-bold text-white">₺@tx.ToplamTutar.ToString("N2")</td>
+                                    <td class="text-center pe-4">
+                                        <button class="btn btn-sm btn-link text-danger p-0" title="Sil"
+                                                @onclick="() => DeleteTransaction(tx.Id)">
+                                            <i class="bi bi-trash fs-5"></i>
                                         </button>
                                     </td>
                                 </tr>
@@ -68,51 +76,121 @@
     </div>
 </div>
 
+<!-- Yeni İşlem Modalı -->
 @if (_showAddModal)
 {
-    <div class="modal fade show d-block animate-fade-in" style="background: rgba(0,0,0,0.7); backdrop-filter: blur(5px);" tabindex="-1">
+    <div class="modal fade show d-block" style="background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content glass-modal">
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold">@( _isEdit ? "İşlemi Düzenle" : "Yeni İşlem Kaydı")</h5>
+            <div class="modal-content glass-modal border-0 shadow-lg">
+                <div class="modal-header border-bottom border-white border-opacity-10 py-3 px-4">
+                    <h5 class="modal-title fw-bold text-gradient">
+                        <i class="bi bi-plus-circle me-2"></i> Yeni İşlem Kaydı
+                    </h5>
                     <button type="button" class="btn-close btn-close-white" @onclick="CloseAddModal"></button>
                 </div>
                 <div class="modal-body p-4">
-                    <div class="row g-3">
+                    <div class="row g-4">
+                        <!-- Hisse Kodu - Autocomplete Dropdown -->
                         <div class="col-12">
-                            <label class="form-label small text-muted">Hisse Kodu</label>
-                            <input type="text" class="form-control glass-input" list="bistSymbols" @bind="_newTx.Symbol" placeholder="Örn: TUPRS" />
-                            <datalist id="bistSymbols">
-                                @foreach (var stock in BistDataService.AllStocks)
+                            <label class="form-label small text-muted fw-bold">HİSSE KODU</label>
+                            <div class="position-relative">
+                                <div class="input-group">
+                                    <span class="input-group-text glass-input border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                                    <input type="text" class="form-control glass-input border-start-0"
+                                           id="symbolInput"
+                                           value="@_symbolSearch"
+                                           @oninput="OnSymbolInput"
+                                           @onblur="OnSymbolBlur"
+                                           placeholder="Sembol veya şirket adı girin... (Örn: TUPRS)"
+                                           autocomplete="off" />
+                                </div>
+                                @if (_filteredStocks.Any() && _showDropdown)
                                 {
-                                    <option value="@stock.Symbol">@stock.Name</option>
+                                    <div class="stock-dropdown" style="position:absolute;z-index:9999;width:100%;max-height:220px;overflow-y:auto;background:rgba(15,23,42,0.98);border:1px solid rgba(255,255,255,0.15);border-radius:0.75rem;margin-top:4px;box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+                                        @foreach (var stock in _filteredStocks.Take(12))
+                                        {
+                                            <div class="stock-dropdown-item px-3 py-2 d-flex align-items-center"
+                                                 style="cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.05);"
+                                                 @onmousedown="() => SelectStock(stock)">
+                                                <span class="fw-bold text-gradient me-2" style="min-width:70px;">@stock.Symbol</span>
+                                                <span class="text-muted small">@stock.Name</span>
+                                            </div>
+                                        }
+                                    </div>
                                 }
-                            </datalist>
+                            </div>
+                            @if (!string.IsNullOrEmpty(_newTx.Sembol))
+                            {
+                                <small class="text-success-bright mt-1 d-block">
+                                    <i class="bi bi-check-circle me-1"></i> Seçili: <strong>@_newTx.Sembol</strong>
+                                    @if (_selectedStockName != null) { <span class="text-muted"> — @_selectedStockName</span> }
+                                </small>
+                            }
                         </div>
+
+                        <!-- İşlem Tipi ve Tarih -->
                         <div class="col-md-6">
-                            <label class="form-label small text-muted">İşlem Tipi</label>
-                            <select class="form-select glass-input" @bind="_newTx.Type">
-                                <option value="@TransactionType.Buy">ALIM</option>
-                                <option value="@TransactionType.Sell">SATIM</option>
+                            <label class="form-label small text-muted fw-bold">İŞLEM TİPİ</label>
+                            <select class="form-select glass-input text-white" @bind="_newTx.IslemTipi">
+                                <option value="@TransactionType.Alis">ALIŞ</option>
+                                <option value="@TransactionType.Satis">SATIŞ</option>
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small text-muted">İşlem Tarihi</label>
-                            <input type="date" class="form-control glass-input" @bind="_newTx.Date" />
+                            <label class="form-label small text-muted fw-bold">İŞLEM TARİHİ</label>
+                            <input type="date" class="form-control glass-input"
+                                   @bind="_newTx.Tarih"
+                                   @bind:after="OnDateChanged" />
+                        </div>
+
+                        <!-- Adet ve Birim Fiyat -->
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted fw-bold">ADET (LOT)</label>
+                            <input type="number" class="form-control glass-input text-white" @bind="_newTx.Adet" placeholder="0" />
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small text-muted">Miktar (Lot)</label>
-                            <input type="number" class="form-control glass-input" @bind="_newTx.Quantity" />
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small text-muted">Birim Fiyat (₺)</label>
-                            <input type="number" step="0.01" class="form-control glass-input" @bind="_newTx.Price" />
+                            <label class="form-label small text-muted fw-bold">BİRİM FİYAT (₺)</label>
+                            <div class="position-relative">
+                                <input type="number" step="0.01" class="form-control glass-input text-white"
+                                       value="@_newTx.BirimFiyat"
+                                       @oninput="OnPriceInput"
+                                       placeholder="0.00" />
+                                @if (_isPriceLoading)
+                                {
+                                    <div class="position-absolute end-0 top-50 translate-middle-y me-3">
+                                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                    </div>
+                                }
+                            </div>
+                            @if (_priceFetchStatus != null)
+                            {
+                                <small class="@(_priceFetchOk ? "text-success-bright" : "text-warning") mt-1 d-block">
+                                    <i class="bi @(_priceFetchOk ? "bi-check-circle" : "bi-exclamation-triangle") me-1"></i> @_priceFetchStatus
+                                </small>
+                            }
+                            else
+                            {
+                                <small class="text-info mt-1 d-block">
+                                    <i class="bi bi-info-circle me-1"></i> Hisse ve tarih seçilince fiyat otomatik çekilir.
+                                    @if (!string.IsNullOrEmpty(_newTx.Sembol))
+                                    {
+                                        <button type="button" class="btn btn-link btn-sm p-0 ms-2 text-primary" @onclick="TryFetchPrice" disabled="@_isPriceLoading">
+                                            <i class="bi bi-arrow-clockwise"></i> Yenile
+                                        </button>
+                                    }
+                                </small>
+                            }
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-link text-white text-decoration-none" @onclick="CloseAddModal">Vazgeç</button>
-                    <button type="button" class="btn btn-primary-glass px-4" @onclick="SaveTransaction">Kaydet</button>
+                <div class="modal-footer border-top border-white border-opacity-10 p-3">
+                    <button type="button" class="btn btn-link text-white text-decoration-none px-4" @onclick="CloseAddModal">Vazgeç</button>
+                    <button type="button" class="btn btn-primary-glass px-5" @onclick="SaveTransaction"
+                            disabled="@(string.IsNullOrWhiteSpace(_newTx.Sembol) || _newTx.Adet <= 0)">
+                        <i class="bi bi-check2-all me-2"></i>
+                        @if (_isPriceLoading) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        KAYDET
+                    </button>
                 </div>
             </div>
         </div>
@@ -120,39 +198,216 @@
 }
 
 @code {
+    private List<PortfolioTransaction> _transactions = new();
     private bool _showAddModal = false;
-    private bool _isEdit = false;
-    private TransactionRecord _newTx = new();
+    private PortfolioTransaction _newTx = new();
+    private bool _isPriceLoading = false;
+    private string _symbolSearch = "";
+    private List<BistStock> _filteredStocks = new();
+    private bool _showDropdown = false;
+    private string? _selectedStockName = null;
+    private string? _priceFetchStatus = null;
+    private bool _priceFetchOk = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _transactions = await PortfolioService.GetTransactionsAsync();
+    }
 
     private void OpenAddModal()
     {
-        _newTx = new TransactionRecord { Date = DateTime.Today };
-        _isEdit = false;
+        _newTx = new PortfolioTransaction { Tarih = DateTime.Today };
+        _symbolSearch = "";
+        _filteredStocks = new();
+        _showDropdown = false;
+        _selectedStockName = null;
+        _priceFetchStatus = null;
         _showAddModal = true;
     }
 
-    private void CloseAddModal() => _showAddModal = false;
-
-    private void SaveTransaction()
+    private void CloseAddModal()
     {
-        if (string.IsNullOrWhiteSpace(_newTx.Symbol)) return;
-        
-        var symbol = _newTx.Symbol.Trim().ToUpper();
-        if (!symbol.EndsWith(".IS")) symbol += ".IS";
-        _newTx.Symbol = symbol;
-
-        InvestmentService.Transactions.Add(_newTx);
         _showAddModal = false;
-        StateHasChanged();
+        _showDropdown = false;
     }
 
-    private void DeleteTransaction(Guid id)
+    private void OnSymbolInput(ChangeEventArgs e)
     {
-        var tx = InvestmentService.Transactions.FirstOrDefault(t => t.Id == id);
-        if (tx != null)
+        _symbolSearch = e.Value?.ToString() ?? "";
+        _newTx.Sembol = "";
+        _selectedStockName = null;
+        _priceFetchStatus = null;
+
+        if (_symbolSearch.Length >= 1)
         {
-            InvestmentService.Transactions.Remove(tx);
+            var query = _symbolSearch.ToUpper();
+            _filteredStocks = BistDataService.AllStocks
+                .Where(s => s.Symbol.StartsWith(query) || s.Name.ToUpper().Contains(query))
+                .OrderBy(s => s.Symbol.StartsWith(query) ? 0 : 1)
+                .ThenBy(s => s.Symbol)
+                .ToList();
+            _showDropdown = _filteredStocks.Any();
+        }
+        else
+        {
+            _filteredStocks = new();
+            _showDropdown = false;
+        }
+    }
+
+    private async Task SelectStock(BistStock stock)
+    {
+        _newTx.Sembol = stock.Symbol + ".IS";
+        _symbolSearch = stock.Symbol;
+        _selectedStockName = stock.Name;
+        _showDropdown = false;
+        _filteredStocks = new();
+        await TryFetchPrice();
+    }
+
+    private void OnSymbolBlur()
+    {
+        // Kısa gecikme: dropdown item mousedown olayı önce tetiklensin
+        Task.Delay(200).ContinueWith(_ =>
+        {
+            _showDropdown = false;
+            InvokeAsync(StateHasChanged);
+        });
+    }
+
+    private async Task OnDateChanged()
+    {
+        _priceFetchStatus = null;
+        await TryFetchPrice();
+    }
+
+    private void OnPriceInput(ChangeEventArgs e)
+    {
+        if (decimal.TryParse(e.Value?.ToString(), out var val))
+            _newTx.BirimFiyat = val;
+    }
+
+    private async Task TryFetchPrice()
+    {
+        if (string.IsNullOrWhiteSpace(_newTx.Sembol)) return;
+
+        // Önceki fiyat çekme işlemi iptal et
+        _priceCts?.Cancel();
+        _priceCts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(25));
+
+        _isPriceLoading = true;
+        _priceFetchStatus = null;
+        StateHasChanged();
+
+        try
+        {
+            var symbol = _newTx.Sembol.Trim().ToUpper();
+            if (!symbol.EndsWith(".IS")) symbol += ".IS";
+
+            // Timeout sonrası otomatik iptal olsun
+            var priceTask = YahooService.GetPriceOnDateAsync(symbol, _newTx.Tarih);
+            var completed = await Task.WhenAny(priceTask, Task.Delay(20000));
+
+            decimal price = 0m;
+            if (completed == priceTask && !priceTask.IsFaulted)
+                price = await priceTask;
+
+            if (price > 0)
+            {
+                _newTx.BirimFiyat = price;
+                _priceFetchStatus = $"Fiyat bulundu: ₺{price:N2} ({_newTx.Tarih:dd.MM.yyyy} kapanış)";
+                _priceFetchOk = true;
+            }
+            else
+            {
+                // Tarihsel fiyat yoksa güncel fiyatı dene (20sn timeout)
+                var liveTask  = YahooService.GetLivePriceAsync(symbol);
+                var completed2 = await Task.WhenAny(liveTask, Task.Delay(10000));
+                decimal livePrice = 0m;
+                if (completed2 == liveTask && !liveTask.IsFaulted)
+                    livePrice = await liveTask;
+
+                if (livePrice > 0)
+                {
+                    _newTx.BirimFiyat = livePrice;
+                    _priceFetchStatus = $"Güncel fiyat kullanıldı: ₺{livePrice:N2} (tarihsel veri yok)";
+                    _priceFetchOk = false;
+                }
+                else
+                {
+                    _priceFetchStatus = "Fiyat verisi alınamadı — lütfen manuel girin.";
+                    _priceFetchOk = false;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Islemler] TryFetchPrice hata: {ex.Message}");
+            _priceFetchStatus = "Bağlantı hatası — fiyatı manuel girin.";
+            _priceFetchOk = false;
+        }
+        finally
+        {
+            _isPriceLoading = false;
             StateHasChanged();
         }
     }
+
+    private bool _saveInProgress = false;
+    private System.Threading.CancellationTokenSource? _priceCts = null;
+
+    private async Task SaveTransaction()
+    {
+        if (string.IsNullOrWhiteSpace(_newTx.Sembol) || _newTx.Adet <= 0) return;
+        if (_saveInProgress) return;
+
+        // Fiyat hala yukleniyorsa iptal et, kullanicinin manuel girdisi veya 0 ile devam et
+        if (_isPriceLoading)
+        {
+            _priceCts?.Cancel();
+            _isPriceLoading = false;
+            if (_newTx.BirimFiyat <= 0)
+            {
+                _priceFetchStatus = "Fiyat alınamadı — lütfen birim fiyatı girin.";
+                _priceFetchOk = false;
+                StateHasChanged();
+                return; // Fiyat girilmeden kaydetme
+            }
+        }
+
+        if (_newTx.BirimFiyat <= 0)
+        {
+            _priceFetchStatus = "Birim fiyat sıfır olamaz — lütfen fiyat girin.";
+            _priceFetchOk = false;
+            StateHasChanged();
+            return;
+        }
+
+        _saveInProgress = true;
+
+        var symbol = _newTx.Sembol.Trim().ToUpper();
+        if (!symbol.EndsWith(".IS")) symbol += ".IS";
+        _newTx.Sembol = symbol;
+
+        await PortfolioService.AddTransactionAsync(_newTx);
+        _transactions = await PortfolioService.GetTransactionsAsync();
+
+        _saveInProgress = false;
+        CloseAddModal();
+        StateHasChanged();
+    }
+
+    private async Task DeleteTransaction(string id)
+    {
+        await PortfolioService.DeleteTransactionAsync(id);
+        _transactions = await PortfolioService.GetTransactionsAsync();
+        StateHasChanged();
+    }
+
+    private string GetBadgeClass(TransactionType type) => type switch
+    {
+        TransactionType.Alis => "bg-success bg-opacity-10 text-success",
+        TransactionType.Satis => "bg-danger bg-opacity-10 text-danger",
+        _ => "bg-secondary"
+    };
 }
