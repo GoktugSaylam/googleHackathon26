@@ -5,7 +5,6 @@ namespace FinansalPusula.Services;
 public class InvestmentService : IStockDataService
 {
     private readonly HttpClient _httpClient;
-    private const string ProxyBaseUrl = "https://api.allorigins.win/raw?url=";
 
     public List<TransactionRecord> Transactions { get; set; } = new()
     {
@@ -38,11 +37,10 @@ public class InvestmentService : IStockDataService
     {
         try
         {
-            // Yahoo Finance v8 (Keyless & Public)
-            var yahooUrl = $"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=1d";
-            var finalUrl = $"{ProxyBaseUrl}{Uri.EscapeDataString(yahooUrl)}";
+            // Kendi backend proxy'mizi kullanıyoruz
+            var url = $"/api/stock/price/{Uri.EscapeDataString(symbol)}";
 
-            var response = await _httpClient.GetFromJsonAsync<YahooFinanceResponse>(finalUrl);
+            var response = await _httpClient.GetFromJsonAsync<YahooFinanceResponse>(url);
             var result = response?.Chart?.Result?.FirstOrDefault();
 
             if (result?.Meta == null) return null;
@@ -69,11 +67,12 @@ public class InvestmentService : IStockDataService
     {
         try
         {
-            // Detay için daha geniş bir range çekiyoruz (5y) ve eventleri (div, split) istiyoruz
-            var yahooUrl = $"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=5y&events=div,split";
-            var finalUrl = $"{ProxyBaseUrl}{Uri.EscapeDataString(yahooUrl)}";
+            // Detay için backend proxy üzerinden tarih aralığı çekiyoruz (5y + unadjusted)
+            var from = DateTime.Today.AddYears(-5);
+            var to = DateTime.Today;
+            var url = $"/api/stock/range/{Uri.EscapeDataString(symbol)}?from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}";
 
-            var response = await _httpClient.GetFromJsonAsync<YahooFinanceResponse>(finalUrl);
+            var response = await _httpClient.GetFromJsonAsync<YahooFinanceResponse>(url);
             var result = response?.Chart?.Result?.FirstOrDefault();
 
             if (result == null) return null;
@@ -131,16 +130,13 @@ public class InvestmentService : IStockDataService
     {
         try
         {
-            var start = ((DateTimeOffset)from).ToUnixTimeSeconds();
-            var end = ((DateTimeOffset)to).ToUnixTimeSeconds();
+            // Hisse Tarihsel Verisi (Backend proxy üzerinden)
+            var stockUrl = $"/api/stock/range/{Uri.EscapeDataString(symbol)}?from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}";
+            var stockRaw = await _httpClient.GetFromJsonAsync<YahooFinanceResponse>(stockUrl);
 
-            // Hisse Tarihsel Verisi
-            var stockUrl = $"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?period1={start}&period2={end}&interval=1d";
-            var stockRaw = await _httpClient.GetFromJsonAsync<YahooFinanceResponse>($"{ProxyBaseUrl}{Uri.EscapeDataString(stockUrl)}");
-
-            // Kur Tarihsel Verisi (USD/TRY)
-            var forexUrl = $"https://query1.finance.yahoo.com/v8/finance/chart/TRY=X?period1={start}&period2={end}&interval=1d";
-            var forexRaw = await _httpClient.GetFromJsonAsync<YahooFinanceResponse>($"{ProxyBaseUrl}{Uri.EscapeDataString(forexUrl)}");
+            // Kur Tarihsel Verisi (Backend proxy üzerinden)
+            var forexUrl = $"/api/stock/range/TRY=X?from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}";
+            var forexRaw = await _httpClient.GetFromJsonAsync<YahooFinanceResponse>(forexUrl);
 
             var stockResult = stockRaw?.Chart?.Result?.FirstOrDefault();
             var forexResult = forexRaw?.Chart?.Result?.FirstOrDefault();

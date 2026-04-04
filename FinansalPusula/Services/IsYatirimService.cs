@@ -5,7 +5,6 @@ namespace FinansalPusula.Services;
 public class IsYatirimService
 {
     private readonly HttpClient _httpClient;
-    private const string ProxyBaseUrl = "https://api.allorigins.win/raw?url=";
 
     public IsYatirimService(HttpClient httpClient)
     {
@@ -14,14 +13,11 @@ public class IsYatirimService
 
     public async Task<List<DividendData>> GetDividendsAsync(string symbol)
     {
-        // Örn: THYAO.IS -> THYAO
         var cleanSymbol = symbol.Split('.')[0].ToUpper();
-        var url = $"https://www.isyatirim.com.tr/_layouts/15/IsYatirim.Website/Common/Data.aspx/HisseTekilTemettu?hisse={cleanSymbol}";
-        var finalUrl = $"{ProxyBaseUrl}{Uri.EscapeDataString(url)}";
-        
         try 
         {
-            var response = await _httpClient.GetFromJsonAsync<IsYatirimResponse<DividendData>>(finalUrl);
+            var url = $"/api/stock/dividends/{cleanSymbol}";
+            var response = await _httpClient.GetFromJsonAsync<IsYatirimResponse<DividendData>>(url);
             return response?.Value ?? new List<DividendData>();
         }
         catch { return new List<DividendData>(); }
@@ -30,12 +26,10 @@ public class IsYatirimService
     public async Task<List<SplitData>> GetSplitsAsync(string symbol)
     {
         var cleanSymbol = symbol.Split('.')[0].ToUpper();
-        var url = $"https://www.isyatirim.com.tr/_layouts/15/IsYatirim.Website/Common/Data.aspx/HisseTekilSermayeArtirimlari?hisse={cleanSymbol}";
-        var finalUrl = $"{ProxyBaseUrl}{Uri.EscapeDataString(url)}";
-        
         try 
         {
-            var response = await _httpClient.GetFromJsonAsync<IsYatirimResponse<SplitData>>(finalUrl);
+            var url = $"/api/stock/splits/{cleanSymbol}";
+            var response = await _httpClient.GetFromJsonAsync<IsYatirimResponse<SplitData>>(url);
             return response?.Value ?? new List<SplitData>();
         }
         catch { return new List<SplitData>(); }
