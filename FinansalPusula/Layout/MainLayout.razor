@@ -1,4 +1,6 @@
 @inherits LayoutComponentBase
+@inject NavigationManager Navigation
+@using System.Security.Claims
 
 <div class="page overflow-hidden">
     <div class="sidebar shrink-0 h-screen sticky top-0">
@@ -7,10 +9,31 @@
 
     <main class="flex-1 overflow-y-auto h-screen">
         <div class="px-4 py-3 d-flex justify-content-end border-bottom border-secondary border-opacity-10 mb-4 h-16 align-items-center">
-            <span class="text-muted d-none d-sm-inline me-3">GDG Hackathon 24h</span>
-            <div class="rounded-circle bg-primary bg-opacity-10 p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                <i class="bi bi-person text-primary"></i>
-            </div>
+            <AuthorizeView>
+                <Authorized Context="authState">
+                    @{ var profile = BuildProfile(authState.User); }
+
+                    <div class="account-chip me-3">
+                        @if (profile.PictureUrl is not null)
+                        {
+                            <img class="account-avatar" src="@profile.PictureUrl" alt="Google profil resmi" referrerpolicy="no-referrer" />
+                        }
+                        else
+                        {
+                            <div class="account-avatar account-avatar-fallback">@profile.Initials</div>
+                        }
+
+                        <div class="account-meta d-none d-sm-flex">
+                            <span class="account-name">@profile.DisplayName</span>
+                            <span class="account-email">@profile.Email</span>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-sm btn-outline-light border-secondary border-opacity-25" @onclick="Logout">
+                        <i class="bi bi-box-arrow-right me-1"></i> Çıkış
+                    </button>
+                </Authorized>
+            </AuthorizeView>
         </div>
 
         <article class="content px-4 pb-5 animate-fade-in">
@@ -18,3 +41,57 @@
         </article>
     </main>
 </div>
+
+@code {
+    private void Logout()
+    {
+        Navigation.NavigateTo("/bff/logout?returnUrl=%2Flogin", forceLoad: true);
+    }
+
+    private static UserProfile BuildProfile(ClaimsPrincipal user)
+    {
+        var displayName = user.FindFirst("name")?.Value
+            ?? user.FindFirst("given_name")?.Value
+            ?? user.Identity?.Name
+            ?? "Yatırımcı";
+
+        var email = user.FindFirst("email")?.Value
+            ?? user.FindFirst(ClaimTypes.Email)?.Value
+            ?? "Google hesabı";
+
+        var pictureUrl = user.FindFirst("picture")?.Value
+            ?? user.FindFirst("urn:google:picture")?.Value;
+
+        return new UserProfile
+        {
+            DisplayName = displayName,
+            Email = email,
+            PictureUrl = string.IsNullOrWhiteSpace(pictureUrl) ? null : pictureUrl,
+            Initials = GetInitials(displayName, email)
+        };
+    }
+
+    private static string GetInitials(string displayName, string email)
+    {
+        var parts = displayName
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Take(2)
+            .Select(p => char.ToUpperInvariant(p[0]))
+            .ToArray();
+
+        if (parts.Length > 0)
+        {
+            return new string(parts);
+        }
+
+        return string.IsNullOrWhiteSpace(email) ? "FP" : char.ToUpperInvariant(email[0]).ToString();
+    }
+
+    private sealed class UserProfile
+    {
+        public string DisplayName { get; set; } = "Yatırımcı";
+        public string Email { get; set; } = "Google hesabı";
+        public string? PictureUrl { get; set; }
+        public string Initials { get; set; } = "FP";
+    }
+}

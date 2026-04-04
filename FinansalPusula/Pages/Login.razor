@@ -1,0 +1,150 @@
+@page "/login"
+@layout EmptyLayout
+@attribute [AllowAnonymous]
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject HttpClient Http
+
+<PageTitle>Giriş Yap - Finansal Pusula</PageTitle>
+
+<div class="login-screen">
+    <div class="noise-layer"></div>
+    <div class="login-grid">
+        <section class="hero-panel">
+            <div class="brand-row">
+                <div class="brand-icon">
+                    <span>FP</span>
+                </div>
+                <div>
+                    <p class="brand-eyebrow">Finansal Pusula</p>
+                    <h1>Yatırım yolculuğun burada güvende.</h1>
+                </div>
+            </div>
+
+            <p class="hero-text">
+                Harcamalarını analiz et, enflasyon etkisini gör ve portföyünü tek panelden yönet.
+                Google hesabınla giriş yaparak kaldığın yerden devam edebilirsin.
+            </p>
+
+            <div class="hero-metrics">
+                <div class="metric-chip">
+                    <span class="metric-value">7/24</span>
+                    <span class="metric-label">Anlık Erişim</span>
+                </div>
+                <div class="metric-chip">
+                    <span class="metric-value">%100</span>
+                    <span class="metric-label">PKCE Güvenli Giriş</span>
+                </div>
+                <div class="metric-chip">
+                    <span class="metric-value">Tek Hesap</span>
+                    <span class="metric-label">Google OAuth</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="login-card">
+            <div class="card-glow"></div>
+            <h2>Hesabına Giriş Yap</h2>
+            <p class="card-subtitle">Finansal Pusula tüm verilerini tek bir güvenli oturumda toplar.</p>
+
+            @if (!string.IsNullOrWhiteSpace(Error))
+            {
+                <div class="alert bg-danger bg-opacity-10 border border-danger border-opacity-25 text-danger rounded-3 py-2 px-3 mb-3">
+                    @Uri.UnescapeDataString(Error)
+                </div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(_hostError))
+            {
+                <div class="alert bg-warning bg-opacity-10 border border-warning border-opacity-25 text-warning rounded-3 py-2 px-3 mb-3">
+                    @_hostError
+                </div>
+            }
+
+            <button class="google-btn" @onclick="SignInWithGoogle" disabled="@(_isRedirecting || _hostError is not null)">
+                <svg viewBox="0 0 533.5 544.3" aria-hidden="true" focusable="false">
+                    <path fill="#4285f4" d="M533.5 278.4c0-17.7-1.5-35.3-4.8-52.5H272v99.5h147.1c-6.4 34.7-25.9 64-55.1 83.5v69.3h88.9c52.1-47.9 80.6-118.5 80.6-199.8z"/>
+                    <path fill="#34a853" d="M272 544.3c73.5 0 135.2-24.3 180.3-66.1l-88.9-69.3c-24.7 16.8-56.5 26.3-91.4 26.3-70.2 0-129.7-47.4-151-111.1H29.3v69.8C74.9 485.2 167.5 544.3 272 544.3z"/>
+                    <path fill="#fbbc04" d="M121 324.1c-10.6-31.7-10.6-65.9 0-97.6v-69.8H29.3c-38.8 77.4-38.8 159.8 0 237.2L121 324.1z"/>
+                    <path fill="#ea4335" d="M272 107.7c36.8-.6 72.2 13.2 99.2 38.7l74.3-74.3C403.5 24.6 340.7-.9 272 0 167.5 0 74.9 59.1 29.3 156.7l91.7 69.8C142.3 155.1 201.8 107.7 272 107.7z"/>
+                </svg>
+                <span>@(_isRedirecting ? "Google yönlendirmesi başlatılıyor..." : "Google ile Giriş Yap")</span>
+            </button>
+
+            <p class="policy-note">Giriş yaparak gizlilik ve kullanım koşullarını kabul etmiş olursun.</p>
+        </section>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    public string? ReturnUrl { get; set; }
+
+    [SupplyParameterFromQuery(Name = "error")]
+    public string? Error { get; set; }
+
+    private bool _isRedirecting;
+    private string? _hostError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ValidateServerHostAsync();
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated == true)
+        {
+            Navigation.NavigateTo(NormalizeReturnUrl(ReturnUrl), forceLoad: true);
+        }
+    }
+
+    private void SignInWithGoogle()
+    {
+        if (_isRedirecting || _hostError is not null)
+        {
+            return;
+        }
+
+        _isRedirecting = true;
+        var target = NormalizeReturnUrl(ReturnUrl);
+        var encoded = Uri.EscapeDataString(target);
+
+        Navigation.NavigateTo($"/bff/login?returnUrl={encoded}", forceLoad: true);
+    }
+
+    private async Task ValidateServerHostAsync()
+    {
+        try
+        {
+            var response = await Http.GetAsync("/bff/health");
+            if (!response.IsSuccessStatusCode)
+            {
+                _hostError = "Sunucu host aktif görünmüyor. Uygulamayı FinansalPusula.Server projesi üzerinden başlat.";
+            }
+        }
+        catch
+        {
+            _hostError = "Sunucu host'a erişilemedi. Uygulamayı FinansalPusula.Server projesi üzerinden başlat.";
+        }
+    }
+
+    private static string NormalizeReturnUrl(string? returnUrl)
+    {
+        if (string.IsNullOrWhiteSpace(returnUrl))
+        {
+            return "/";
+        }
+
+        if (!Uri.TryCreate(returnUrl, UriKind.Relative, out var relativeUri))
+        {
+            return "/";
+        }
+
+        var value = relativeUri.ToString();
+        if (value.StartsWith("//") || value.StartsWith("\\\\"))
+        {
+            return "/";
+        }
+
+        return value.StartsWith('/') ? value : $"/{value}";
+    }
+}

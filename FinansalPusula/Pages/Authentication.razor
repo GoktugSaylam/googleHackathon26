@@ -1,0 +1,32 @@
+@page "/authentication/{action}"
+@layout EmptyLayout
+@attribute [AllowAnonymous]
+@inject NavigationManager Navigation
+
+<PageTitle>Yönlendiriliyor - Finansal Pusula</PageTitle>
+
+<div class="auth-shell">
+    <div class="auth-status-card">
+        <div class="auth-state">
+            <div class="custom-spinner"></div>
+            <h1>Giriş Sayfasına Dönülüyor</h1>
+            <p>Yeni güvenli kimlik doğrulama akışına yönlendiriliyorsun.</p>
+            <button type="button" class="btn btn-primary-glass" @onclick="GoToLogin">Giriş Ekranına Git</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string? Action { get; set; }
+
+    protected override void OnInitialized()
+    {
+        Navigation.NavigateTo("/login", replace: true);
+    }
+
+    private void GoToLogin()
+    {
+        Navigation.NavigateTo("/login", forceLoad: true);
+    }
+}

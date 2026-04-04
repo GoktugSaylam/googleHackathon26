@@ -241,8 +241,6 @@
             }
         </div>
     </div>
-        </div>
-    </div>
 </div>
 
 <!-- Add Stock Modal (Task 2 & Task 1) -->
@@ -420,6 +418,29 @@
     private string _searchSymbol = "TUPRS.IS";
     private bool _isLoading = false;
     private SimulationResult? _simResult;
+
+    private bool _showAddModal = false;
+    private string _newSymbol = "";
+    private int _newQuantity = 0;
+    private decimal _newCost = 0;
+    private string _symbolError = "";
+    private StockDetail? _selectedDetail = null;
+
+    private void CloseAddModal()
+    {
+        _showAddModal = false;
+        _symbolError = "";
+    }
+
+    private void AddSymbol()
+    {
+        _showAddModal = false;
+    }
+
+    private string FormatPreview(string symbol)
+    {
+        return symbol?.ToUpper() ?? string.Empty;
+    }
 
     private async Task ExploreStock()
     {

@@ -213,3 +213,67 @@ body {
 .text-danger-bright {
     color: #ff4d4d !important;
 }
+
+.account-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.35rem 0.7rem 0.35rem 0.35rem;
+    border: 1px solid var(--glass-border);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.04);
+    min-width: 0;
+    max-width: min(56vw, 420px);
+}
+
+.account-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.account-avatar-fallback {
+    display: grid;
+    place-items: center;
+    color: #04172c;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    background: linear-gradient(140deg, var(--accent-primary), var(--accent-secondary));
+}
+
+.account-meta {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.account-name,
+.account-email {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.account-name {
+    color: var(--text-main);
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.account-email {
+    color: var(--text-muted);
+    font-size: 0.76rem;
+    max-width: 260px;
+}
+
+@media (max-width: 575.98px) {
+    .account-chip {
+        border: none;
+        padding: 0;
+        background: transparent;
+    }
+}

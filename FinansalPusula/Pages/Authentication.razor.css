@@ -1,0 +1,53 @@
+.auth-shell {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 1.5rem;
+    background:
+        radial-gradient(1200px 520px at 10% -15%, rgba(0, 209, 255, 0.2), transparent 62%),
+        radial-gradient(900px 420px at 100% 120%, rgba(0, 255, 133, 0.18), transparent 60%),
+        linear-gradient(155deg, #0a1326 0%, #0f172a 45%, #131e35 100%);
+}
+
+.auth-status-card {
+    width: min(560px, 100%);
+    padding: clamp(1.5rem, 2.8vw, 2.25rem);
+    border-radius: 1.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(11, 21, 40, 0.74);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+
+.auth-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.85rem;
+}
+
+.auth-state h1 {
+    margin: 0;
+    color: #f8fafc;
+    font-size: clamp(1.25rem, 2.3vw, 1.65rem);
+}
+
+.auth-state p {
+    margin: 0;
+    color: rgba(226, 232, 240, 0.85);
+    max-width: 48ch;
+    line-height: 1.6;
+}
+
+.auth-state i {
+    font-size: 2rem;
+}
+
+.auth-state-success i {
+    color: #00ff85;
+}
+
+.auth-state-error i {
+    color: #ff6b6b;
+}
