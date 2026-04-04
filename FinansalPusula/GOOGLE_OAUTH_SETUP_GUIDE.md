@@ -39,22 +39,20 @@ Opsiyonel (frontend'i ayri host olarak da acmak):
 - Login endpointi: `/bff/login`
 - Logout endpointi: `/bff/logout`
 - Kullanıcı bilgisi endpointi: `/bff/user`
-- Google callback endpointi (varsayılan): `/authentication/login-callback`
+- Google callback endpointi (varsayılan): `/signin-google`
 
 ## 2) Google Cloud Console Ayarları
 
 1. Google Cloud Console'da `OAuth client ID` oluştur.
 2. Application type: `Web application`.
 3. Aşağıdaki redirect URI mutlaka ekli olmalı:
-  - `https://localhost:7015/authentication/login-callback`
-4. Geriye donuk uyumluluk icin su callback'i de ekleyebilirsin:
   - `https://localhost:7015/signin-google`
-5. Production için ayrıca kendi domain callback'ini ekle:
-  - `https://app.senin-domainin.com/authentication/login-callback`
-6. OAuth consent screen tarafında test kullanıcılarını tanımla.
+4. Production için ayrıca kendi domain callback'ini ekle:
+  - `https://app.senin-domainin.com/signin-google`
+5. OAuth consent screen tarafında test kullanıcılarını tanımla.
 
 Not:
-- Bu mimaride varsayilan callback yolu `authentication/login-callback` olarak ayarlidir.
+- Bu mimaride varsayilan callback yolu `signin-google` olarak ayarlidir.
 - Gerekiyorsa `FinansalPusula.Server/appsettings.json` icindeki `Authentication:Google:CallbackPath` degeri ile degistirilebilir.
 
 ## 3) Secret Yönetimi (Zorunlu)
@@ -100,7 +98,7 @@ Uygulama adresi:
   - Google API key (AIza...) değeri `ClientSecret` değildir.
   - OAuth için Google Cloud'da `OAuth 2.0 Client IDs > Web application` altında verilen gerçek `Client secret` kullanılmalıdır.
 - `redirect_uri_mismatch`
-  - Google Console'da `https://localhost:7015/authentication/login-callback` eksik veya farklı.
+  - Google Console'da `https://localhost:7015/signin-google` eksik veya farklı.
 - Login sonrası sürekli login ekranına düşme
   - Cookie yazılamıyor olabilir; HTTPS ve tarayıcı cookie politikalarını kontrol et.
 

@@ -1,558 +1,221 @@
 @page "/yatirim-takip"
 @using FinansalPusula.Services
-@inject InvestmentService InvestmentService
-@inject GeminiService GeminiService
+@using Microsoft.JSInterop
+@inject YahooFinanceService YahooService
+@inject PortfolioService PortfolioService
+@inject NavigationManager NavManager
+@inject IJSRuntime _jsRuntime
 
-<PageTitle>Yatırım Takip - Finansal Pusula</PageTitle>
+<PageTitle>Dashboard - HisseMetre</PageTitle>
 
-<div class="container-fluid animate-fade-in">
-    <div class="row">
-        <div class="col-xl-12 mx-auto">
-            <!-- Hisse Araştırma Barı -->
-            <div class="glass-search mb-5 animate-slide-down">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="input-group">
-                        <span class="input-group-text bg-transparent border-0 text-primary">
-                            <i class="bi bi-search"></i>
-                        </span>
-                        <input type="text" class="form-control glass-input-search" list="bistSymbols" 
-                               @bind="_searchSymbol" placeholder="Hisse Araştır (Stock Explorer)..." />
-                        <button class="btn btn-primary-glass px-4" @onclick="ExploreStock" disabled="@_isLoading">
-                           @(_isLoading ? "..." : "Getir")
-                        </button>
+<div class="container-fluid animate-fade-in p-4">
+    <div class="row g-4">
+        <div class="col-xl-11 mx-auto">
+            
+            <!-- Üst Kartlar: Bakiye ve Portföy -->
+            <div class="row g-4 mb-5">
+                <div class="col-md-3">
+                    <div class="metric-card h-100">
+                        <div class="text-muted small fw-bold mb-2">TL BAKİYE</div>
+                        <h2 class="fw-bold mb-0 text-white">₺42.500,00</h2>
+                        <i class="bi bi-wallet2 position-absolute end-0 bottom-0 opacity-10 fs-1 me-3 mb-2"></i>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card h-100">
+                        <div class="text-muted small fw-bold mb-2">USD BAKİYE</div>
+                        <h2 class="fw-bold mb-0 text-white">$1.240,00</h2>
+                        <i class="bi bi-currency-dollar position-absolute end-0 bottom-0 opacity-10 fs-1 me-3 mb-2"></i>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card h-100 border-primary-light">
+                        <div class="text-muted small fw-bold mb-2">PORTFÖY DEĞERİ (TL)</div>
+                        <h2 class="fw-bold mb-0 text-white">₺@_totalValueTL.ToString("N0")</h2>
+                        <span class="text-success-bright x-small fw-bold">+%7,2 ▲</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card h-100 border-primary-light">
+                        <div class="text-muted small fw-bold mb-2">PORTFÖY DEĞERİ (USD)</div>
+                        <h2 class="fw-bold mb-0 text-white">$@_totalValueUSD.ToString("N0")</h2>
+                        <span class="text-success-bright x-small fw-bold">+%4,1 ▲</span>
                     </div>
                 </div>
             </div>
 
-            @if (_simResult != null)
-            {
-                <!-- Üst Panel: 14 Metrik Kartı -->
-                <div class="row g-3 mb-5 animate-fade-in">
-                    <!-- Row 1: Yatırım TL/USD -->
-                    <div class="col-6 col-md-3">
-                        <div class="metric-card-mini">
-                            <div class="text-muted small text-uppercase fw-bold"><i class="bi bi-fire text-orange me-1"></i> Toplam Yatırım (TL)</div>
-                            <div class="fs-4 fw-bold">@_simResult.TotalInvestedTL.ToString("N0") ₺</div>
+            <!-- Ana Tablo ve Grafik -->
+            <div class="row g-4 mb-5">
+                <div class="col-lg-8">
+                    <div class="glass-card p-4 h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h4 class="fw-bold mb-0">Hisse Portföyü</h4>
+                            <div class="badge-finance">@_portfolioQuotes.Count Varlık</div>
                         </div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <div class="metric-card-mini">
-                            <div class="text-muted small text-uppercase fw-bold"><i class="bi bi-currency-dollar text-success me-1"></i> Toplam Yatırım (USD)</div>
-                            <div class="fs-4 fw-bold">$@_simResult.TotalInvestedUSD.ToString("N2")</div>
-                        </div>
-                    </div>
-                    <!-- Row 2: Ort Maliyet TL/USD -->
-                    <div class="col-6 col-md-3">
-                        <div class="metric-card-mini">
-                            <div class="text-muted small text-uppercase fw-bold"><i class="bi bi-tag text-purple me-1"></i> Ort. Maliyet / Lot (TL)</div>
-                            <div class="fs-4 fw-bold">@_simResult.AvgCostTL.ToString("N4") ₺</div>
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <div class="metric-card-mini">
-                            <div class="text-muted small text-uppercase fw-bold"><i class="bi bi-tag text-purple me-1"></i> Ort. Maliyet / Lot (USD)</div>
-                            <div class="fs-4 fw-bold">$@_simResult.AvgCostUSD.ToString("N4")</div>
-                        </div>
-                    </div>
-                    <!-- Row 3: Güncel Değer TL/USD -->
-                    <div class="col-6 col-md-3">
-                        <div class="metric-card-mini border-primary-light">
-                            <div class="text-muted small text-uppercase fw-bold"><i class="bi bi-wallet2 text-primary me-1"></i> Güncel Değer (TL)</div>
-                            <div class="fs-4 fw-bold">@_simResult.CurrentValueTL.ToString("N0") ₺</div>
-                             <div class="text-success small fw-bold">+@(Math.Abs((_simResult.CurrentValueTL - _simResult.TotalInvestedTL) / _simResult.TotalInvestedTL * 100).ToString("N1"))%</div>
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <div class="metric-card-mini border-primary-light">
-                            <div class="text-muted small text-uppercase fw-bold"><i class="bi bi-wallet2 text-primary me-1"></i> Güncel Değer (USD)</div>
-                            <div class="fs-4 fw-bold">$@_simResult.CurrentValueUSD.ToString("N2")</div>
-                            <div class="text-success small fw-bold">+@(Math.Abs((_simResult.CurrentValueUSD - _simResult.TotalInvestedUSD) / _simResult.TotalInvestedUSD * 100).ToString("N1"))%</div>
-                        </div>
-                    </div>
-                    <!-- Row 4: Lotlar -->
-                    <div class="col-6 col-md-3">
-                        <div class="metric-card-mini">
-                            <div class="text-muted small text-uppercase fw-bold"><i class="bi bi-box-seam-fill text-blue me-1"></i> Toplam Lot (Bölünmeler Dahil)</div>
-                            <div class="fs-4 fw-bold">@_simResult.TotalLots.ToString("N0")</div>
-                            <div class="text-muted x-small">Bölünmelerden: +0 lot</div>
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <div class="metric-card-mini">
-                            <div class="text-muted small text-uppercase fw-bold"><i class="bi bi-arrow-repeat text-green me-1"></i> Temettüden Kazanılan Lot (DRIP)</div>
-                            <div class="fs-4 fw-bold text-success-bright">+@_simResult.DripLots.ToString("N3")</div>
-                            <div class="text-muted x-small">YoC (Yıllık): %176,95 | YoC (Küm.): %558,51</div>
-                        </div>
-                    </div>
-                    <!-- Row 5: Temettüler -->
-                    <div class="col-6 col-md-3">
-                        <div class="metric-card-mini">
-                            <div class="text-muted small text-uppercase fw-bold"><i class="bi bi-piggy-bank text-green me-1"></i> Toplam Temettü (Net TL)</div>
-                            <div class="fs-4 fw-bold text-success">@_simResult.TotalNetDividendTL.ToString("N2") ₺</div>
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <div class="metric-card-mini">
-                            <div class="text-muted small text-uppercase fw-bold"><i class="bi bi-piggy-bank text-green me-1"></i> Toplam Temettü (Net USD)</div>
-                            <div class="fs-4 fw-bold text-success">$@_simResult.TotalNetDividendUSD.ToString("N2")</div>
-                        </div>
-                    </div>
-                     <!-- Row 6: Fiyat -->
-                    <div class="col-6 col-md-3">
-                        <div class="metric-card-mini">
-                            <div class="text-muted small text-uppercase fw-bold"><i class="bi bi-tag-fill text-yellow me-1"></i> Güncel Hisse Fiyatı (TL)</div>
-                            <div class="fs-4 fw-bold">@(_simResult.DailyPoints.LastOrDefault()?.PriceTL.ToString("N2") ?? "0") ₺</div>
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <div class="metric-card-mini">
-                            <div class="text-muted small text-uppercase fw-bold"><i class="bi bi-tag-fill text-yellow me-1"></i> Güncel Hisse Fiyatı (USD)</div>
-                            <div class="fs-4 fw-bold">$@(_simResult.DailyPoints.LastOrDefault()?.PriceUSD.ToString("N4") ?? "0")</div>
-                        </div>
-                    </div>
-                     <!-- Row 7: MA -->
-                    <div class="col-6 col-md-3">
-                        <div class="metric-card-mini">
-                            <div class="text-muted small text-uppercase fw-bold"><i class="bi bi-activity text-info me-1"></i> 50/200 Günlük Ort. (Ham TL)</div>
-                            <div class="fw-bold"><span class="text-yellow">50G: 236,69 ₺</span> | <span class="text-purple">200G: 194,60 ₺</span></div>
-                            <div class="text-success x-small fw-bold">▲ 50G Üzeri</div>
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <div class="metric-card-mini">
-                            <div class="text-muted small text-uppercase fw-bold"><i class="bi bi-activity text-info me-1"></i> 50/200 Günlük Ort. (Ham USD)</div>
-                            <div class="fw-bold"><span class="text-yellow">50G: $5,3090</span> | <span class="text-purple">200G: $4,3649</span></div>
-                            <div class="text-muted x-small">Net Amortisman: 1,3 Yıl</div>
+                        <div class="table-responsive">
+                            <table class="table table-glass align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Sembol</th>
+                                        <th>Miktar</th>
+                                        <th>Maliyet</th>
+                                        <th>Güncel</th>
+                                        <th>Değer</th>
+                                        <th class="text-end">Kar / Zarar</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var stock in _portfolioQuotes)
+                                    {
+                                        <tr class="cursor-pointer hover-row" @onclick="() => NavigateToDetail(stock.Symbol)">
+                                            <td class="fw-bold text-gradient">@stock.Symbol</td>
+                                            <td>@stock.Quantity.ToString("N0")</td>
+                                            <td>₺@stock.AverageCost.ToString("N2")</td>
+                                            <td class="fw-bold">₺@stock.Price.ToString("N2")</td>
+                                            <td class="fw-bold text-white">₺@stock.TotalValue.ToString("N2")</td>
+                                            <td class="text-end">
+                                                <div class="@(stock.ProfitLoss >= 0 ? "text-success-bright" : "text-danger-bright") fw-bold">
+                                                    @(stock.ProfitLoss >= 0 ? "+" : "")₺@stock.ProfitLoss.ToString("N2")
+                                                </div>
+                                                <small class="text-muted x-small">(@stock.ProfitLossPercentage.ToString("N2")%)</small>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
+                <div class="col-lg-4">
+                    <div class="glass-card p-4 h-100">
+                        <h4 class="fw-bold mb-4">Varlık Dağılımı</h4>
+                        <div class="p-3" style="min-height: 250px;">
+                            <canvas id="distributionChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                <!-- Grafikler -->
-                <div class="row g-4 mb-5">
-                    <div class="col-lg-12">
-                        <div class="glass-card p-4">
-                             <h6 class="fw-bold mb-4 d-flex align-items-center"><i class="bi bi-graph-up me-2 text-primary"></i> @_simResult.Symbol - Son 5 Yıllık Fiyat Grafiği (TL)</h6>
-                             <canvas id="priceChart" height="100"></canvas>
+            <!-- Son İşlemler -->
+            <div class="row g-4">
+                <div class="col-12">
+                    <div class="glass-card p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h4 class="fw-bold mb-0">Son İşlemler</h4>
+                            <a href="/islemler" class="btn btn-sm btn-outline-primary border-white border-opacity-10 text-white px-3">Tümünü Gör</a>
                         </div>
-                    </div>
-                    <div class="col-lg-6">
-                        <div class="glass-card p-4">
-                             <h6 class="fw-bold mb-4"><i class="bi bi-bar-chart me-2 text-success"></i> Toplam Lot Gelişimi (Bölünmeler + T+2 DRIP dahil)</h6>
-                             <canvas id="lotChart" height="150"></canvas>
-                        </div>
-                    </div>
-                    <div class="col-lg-6">
-                        <div class="glass-card p-4">
-                             <h6 class="fw-bold mb-4"><i class="bi bi-graph-down me-2 text-warning"></i> Birim Fiyat (Kapanış)</h6>
-                             <canvas id="unitPriceChart" height="150"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Tablolar -->
-                <div class="row g-4 mb-5">
-                    <!-- Yıllık Performans -->
-                     <div class="col-xl-12">
-                        <div class="glass-card">
-                             <h6 class="fw-bold mb-4 p-4 pb-0"><i class="bi bi-calendar3 me-2 text-primary"></i> Yıllık Performans Özeti</h6>
-                             <div class="table-responsive">
-                                 <table class="table table-glass-dark">
-                                     <thead>
-                                         <tr>
-                                             <th>YIL</th>
-                                             <th class="text-end">LOT SAYISI</th>
-                                             <th class="text-end">NET TEMETTÜ (₺)</th>
-                                             <th class="text-end">DEĞER ARTIŞI</th>
-                                             <th class="text-end">ARTIŞ %</th>
-                                             <th class="text-end">YIL SONU TL</th>
-                                             <th class="text-end">YIL SONU USD</th>
-                                         </tr>
-                                     </thead>
-                                     <tbody>
-                                         @foreach(var y in _simResult.YearlySummaries)
-                                         {
-                                             <tr>
-                                                 <td class="fw-bold">@y.Year</td>
-                                                 <td class="text-end">@y.LotCount.ToString("N0")</td>
-                                                 <td class="text-end text-success">@y.NetDividendTL.ToString("N2") ₺</td>
-                                                 <td class="text-end text-success-bright">+783.558,00 ₺</td>
-                                                 <td class="text-end text-success">+41,9%</td>
-                                                 <td class="text-end fw-bold">@y.YearEndValueTL.ToString("N0") ₺</td>
-                                                 <td class="text-end text-muted">$@y.YearEndValueUSD.ToString("N2")</td>
-                                             </tr>
-                                         }
-                                     </tbody>
-                                 </table>
-                             </div>
-                        </div>
-                    </div>
-
-                    <!-- Detaylı Temettü -->
-                    <div class="col-xl-12">
-                        <div class="glass-card">
-                             <div class="d-flex justify-content-between align-items-center p-4 pb-2">
-                                 <h6 class="fw-bold mb-0"><i class="bi bi-coin me-2 text-yellow"></i> Temettü Geçmişi</h6>
-                                 <span class="x-small text-muted">BIST Stopaj (%10) kesintisi uygulanmaktadır. DRIP simülasyonu T+2 kurallarına göre işlem görür.</span>
-                             </div>
-                             <div class="table-responsive">
-                                 <table class="table table-glass-dark table-sm fs-x-small">
-                                     <thead>
-                                         <tr>
-                                             <th>TARİH</th>
-                                             <th class="text-end">BİRİM TEMETTÜ</th>
-                                             <th class="text-end">SAHİP LOT</th>
-                                             <th class="text-end">BRÜT GELİR</th>
-                                             <th class="text-end">STOPAJ (%10)</th>
-                                             <th class="text-end">NET TEMETTÜ</th>
-                                             <th class="text-end">ALIM FİYATI (T+2)</th>
-                                             <th class="text-end">ALINAN LOT</th>
-                                             <th class="text-end">KALAN NAKİT</th>
-                                         </tr>
-                                     </thead>
-                                     <tbody>
-                                         @foreach(var e in _simResult.DividendEvents.OrderByDescending(x => x.Date))
-                                         {
-                                             <tr>
-                                                 <td>@e.Date.ToShortDateString()</td>
-                                                 <td class="text-end">@e.DividendPerShare.ToString("N4") ₺</td>
-                                                 <td class="text-end">@e.OwnedLots.ToString("N0")</td>
-                                                 <td class="text-end">@e.GrossIncome.ToString("N2") ₺</td>
-                                                 <td class="text-end text-danger-bright">-@e.TaxAmount.ToString("N2")</td>
-                                                 <td class="text-end text-success fw-bold">@e.NetIncome.ToString("N2") ₺</td>
-                                                 <td class="text-end">@e.BuyPriceT2.ToString("N4")</td>
-                                                 <td class="text-end text-success-bright fw-bold">+@e.LotsBought.ToString("N0")</td>
-                                                 <td class="text-end opacity-50">46,77</td>
-                                             </tr>
-                                         }
-                                     </tbody>
-                                 </table>
-                             </div>
+                        <div class="table-responsive">
+                            <table class="table table-glass table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Tarih</th>
+                                        <th>Sembol</th>
+                                        <th>Tip</th>
+                                        <th class="text-end">Adet</th>
+                                        <th class="text-end">Birim Fiyat</th>
+                                        <th class="text-end">Toplam</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var tx in _transactions.OrderByDescending(t => t.Tarih).Take(5))
+                                    {
+                                        <tr>
+                                            <td>@tx.Tarih.ToString("dd.MM.yyyy")</td>
+                                            <td class="fw-bold">@tx.Sembol</td>
+                                            <td><span class="opacity-75">@tx.IslemTipi.ToString().ToUpper()</span></td>
+                                            <td class="text-end">@tx.Adet.ToString("N0")</td>
+                                            <td class="text-end">₺@tx.BirimFiyat.ToString("N2")</td>
+                                            <td class="text-end fw-bold text-white">₺@tx.ToplamTutar.ToString("N2")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
-            }
-            else
-            {
-                <div class="text-center py-5 opacity-50">
-                    <i class="bi bi-search fs-1 mb-3 d-block"></i>
-                    <h5>Hisse Araştır (Stock Explorer)</h5>
-                    <p>Portföy simülasyonunu başlatmak için bir hisse kodu girin.</p>
-                </div>
-            }
+            </div>
         </div>
     </div>
 </div>
 
-<!-- Add Stock Modal (Task 2 & Task 1) -->
-@if (_showAddModal)
-{
-    <div class="modal fade show d-block animate-fade-in" style="background: rgba(0,0,0,0.7); backdrop-filter: blur(5px);" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content glass-modal">
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold"><i class="bi bi-plus-circle me-2 text-primary"></i>Yeni Hisse Ekle</h5>
-                    <button type="button" class="btn-close btn-close-white" @onclick="CloseAddModal"></button>
-                </div>
-                <div class="modal-body p-4">
-                    <div class="mb-4">
-                        <p class="text-muted small mb-2"><i class="bi bi-info-circle me-1"></i> Sadece Borsa İstanbul (BIST) hisselerini takip edebilirsiniz.</p>
-                        <div class="mb-3">
-                            <label class="form-label small text-muted">Hisse Kodu (Sembol veya İsim)</label>
-                            <input type="text" list="bistSymbols" class="form-control glass-input" 
-                                   @bind="_newSymbol" placeholder="Örn: THYAO" @bind:event="oninput" />
-                            <datalist id="bistSymbols">
-                                @foreach (var stock in BistDataService.AllStocks)
-                                {
-                                    <option value="@stock.Symbol">@stock.Name</option>
-                                }
-                            </datalist>
-                            <small class="text-primary mt-1 d-block">Önizleme: @FormatPreview(_newSymbol)</small>
-                        </div>
-                        <div class="row g-3">
-                            <div class="col-6">
-                                <label class="form-label small text-muted">Lot Miktarı</label>
-                                <input type="number" class="form-control glass-input" @bind="_newQuantity" />
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label small text-muted">Ort. Maliyet (₺)</label>
-                                <input type="number" class="form-control glass-input" @bind="_newCost" />
-                            </div>
-                        </div>
-                    </div>
-                    @if (!string.IsNullOrEmpty(_symbolError))
-                    {
-                        <div class="alert bg-danger bg-opacity-10 text-danger border-0 small py-2 animate-fade-in">
-                            <i class="bi bi-exclamation-circle me-1"></i> @_symbolError
-                        </div>
-                    }
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-link text-white text-decoration-none" @onclick="CloseAddModal">Vazgeç</button>
-                    <button type="button" class="btn btn-primary-glass px-4" @onclick="AddSymbol">Portföye Ekle</button>
-                </div>
-            </div>
-        </div>
-    </div>
-}
-
-<!-- Detail Modal (Task 4) -->
-@if (_selectedDetail != null)
-{
-    <div class="modal fade show d-block animate-fade-in" style="background: rgba(0,0,0,0.7); backdrop-filter: blur(5px);" tabindex="-1">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content glass-modal">
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold">@_selectedDetail.Symbol Hisse Analiz Detayı</h5>
-                    <button type="button" class="btn-close btn-close-white" @onclick="() => _selectedDetail = null"></button>
-                </div>
-                <div class="modal-body p-4">
-                    <div class="row g-4">
-                        <div class="col-md-6">
-                            <h6 class="text-muted small text-uppercase fw-bold mb-3 border-bottom border-white border-opacity-10 pb-2">Hareketli Ortalamalar</h6>
-                            <div class="d-flex justify-content-between mb-2">
-                                <span>50 Günlük Ort. (MA50)</span>
-                                <span class="fw-bold text-primary">₺@_selectedDetail.FiftyDayAverage.ToString("N2")</span>
-                            </div>
-                            <div class="d-flex justify-content-between">
-                                <span>200 Günlük Ort. (MA200)</span>
-                                <span class="fw-bold text-warning">₺@_selectedDetail.TwoHundredDayAverage.ToString("N2")</span>
-                            </div>
-
-                            <h6 class="text-muted small text-uppercase fw-bold mt-4 mb-3 border-bottom border-white border-opacity-10 pb-2">Temettü Verimi & DRIP</h6>
-                            <div class="d-flex justify-content-between mb-2">
-                                <span>Kazanılan Lotlar (DRIP)</span>
-                                <span class="fw-bold text-success-bright">@_selectedDetail.DripLots.ToString("N2") Lot</span>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <h6 class="text-muted small text-uppercase fw-bold mb-3 border-bottom border-white border-opacity-10 pb-2">Temettü Geçmişi</h6>
-                            <div class="table-responsive">
-                                <table class="table table-sm table-glass fs-x-small">
-                                    <thead>
-                                        <tr>
-                                            <th>Tarih</th>
-                                            <th>Tutar</th>
-                                            <th>Verim</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach(var div in _selectedDetail.Dividends)
-                                        {
-                                            <tr>
-                                                <td>@div.Date.ToShortDateString()</td>
-                                                <td>₺@div.Amount.ToString("N2")</td>
-                                                <td class="text-success">%@div.Yield.ToString("N1")</td>
-                                            </tr>
-                                        }
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-primary-glass" @onclick="() => _selectedDetail = null">Kapat</button>
-                </div>
-            </div>
-        </div>
-    </div>
-}
-
-@inject IJSRuntime JS
 <style>
-    .glass-search {
-        background: rgba(255, 255, 255, 0.03);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 20px;
-        padding: 10px 20px;
-    }
-    .glass-input-search {
-        background: transparent !important;
-        border: none !important;
-        color: white !important;
-        font-size: 1.1rem;
-    }
-    .metric-card-mini {
-        background: rgba(255, 255, 255, 0.02);
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        border-radius: 12px;
-        padding: 15px;
-        height: 100%;
-        transition: all 0.3s ease;
-    }
-    .metric-card-mini:hover {
-        background: rgba(255, 255, 255, 0.04);
-        border-color: rgba(255, 255, 255, 0.1);
-    }
-    .border-primary-light { border-left: 3px solid #00d1ff !important; }
+    .hover-row:hover { background: rgba(255, 255, 255, 0.03); }
+    .cursor-pointer { cursor: pointer; }
+    .border-primary-light { border-top: 3px solid var(--accent-primary) !important; }
     .text-orange { color: #ff8a00; }
-    .text-purple { color: #bf5af2; }
-    .text-yellow { color: #ffd60a; }
-    .text-blue { color: #0a84ff; }
-    .text-green { color: #30d158; }
-    
-    .table-glass-dark {
-        color: rgba(255,255,255,0.8);
-        font-size: 0.9rem;
-    }
-    .table-glass-dark thead th {
-        background: rgba(255,255,255,0.03);
-        border-bottom: 1px solid rgba(255,255,255,0.1);
-        color: rgba(255,255,255,0.4);
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 0.75rem;
-        padding: 12px;
-    }
-    .table-glass-dark td {
-        border-bottom: 1px solid rgba(255,255,255,0.05);
-        padding: 12px;
-    }
-    
-    .fs-x-small { font-size: 0.7rem !important; }
-    .x-small { font-size: 0.75rem !important; }
 </style>
 
 @code {
-    private string _searchSymbol = "TUPRS.IS";
-    private bool _isLoading = false;
-    private SimulationResult? _simResult;
+    private List<PortfolioTransaction> _transactions = new();
+    private List<StockData> _portfolioQuotes = new();
+    private decimal _totalValueTL = 0;
+    private decimal _totalValueUSD = 0;
 
-    private bool _showAddModal = false;
-    private string _newSymbol = "";
-    private int _newQuantity = 0;
-    private decimal _newCost = 0;
-    private string _symbolError = "";
-    private StockDetail? _selectedDetail = null;
-
-    private void CloseAddModal()
+    protected override async Task OnInitializedAsync()
     {
-        _showAddModal = false;
-        _symbolError = "";
+        _transactions = await PortfolioService.GetTransactionsAsync();
+        await CalculatePortfolio();
     }
 
-    private void AddSymbol()
+    private async Task CalculatePortfolio()
     {
-        _showAddModal = false;
+        var groups = _transactions
+            .Where(t => t.IslemTipi == TransactionType.Alis || t.IslemTipi == TransactionType.Satis)
+            .GroupBy(t => t.Sembol);
+
+        foreach (var group in groups)
+        {
+            var symbol = group.Key;
+            var netQuantity = group.Sum(t => t.IslemTipi == TransactionType.Alis ? t.Adet : -t.Adet);
+            
+            if (netQuantity <= 0) continue;
+
+            var totalCost = group.Where(t => t.IslemTipi == TransactionType.Alis).Sum(t => t.ToplamTutar);
+            var buyQuantity = group.Where(t => t.IslemTipi == TransactionType.Alis).Sum(t => t.Adet);
+            var avgCost = totalCost / buyQuantity;
+
+            // Fiyat bilgisini çek
+            var price = await YahooService.GetLivePriceAsync(symbol);
+            
+            _portfolioQuotes.Add(new StockData
+            {
+                Symbol = symbol,
+                Price = price,
+                Quantity = netQuantity,
+                AverageCost = avgCost
+            });
+        }
+
+        _totalValueTL = _portfolioQuotes.Sum(s => s.TotalValue);
+        _totalValueUSD = _totalValueTL / 32.5m; // TODO: Canlı kur
+
+        // Grafikleri çiz
+        await Task.Delay(100);
+        await RenderDistributionChart();
     }
 
-    private string FormatPreview(string symbol)
+    private async Task RenderDistributionChart()
     {
-        return symbol?.ToUpper() ?? string.Empty;
-    }
+        if (!_portfolioQuotes.Any()) return;
 
-    private async Task ExploreStock()
-    {
-        if (string.IsNullOrWhiteSpace(_searchSymbol)) return;
-        
-        _isLoading = true;
-        StateHasChanged();
-        
         try
         {
-            var symbol = _searchSymbol.Trim().ToUpper();
-            if (!symbol.EndsWith(".IS")) symbol += ".IS";
-            
-            var history = await InvestmentService.GetHistoricalDataAsync(symbol, DateTime.Today.AddYears(-5), DateTime.Today);
-            var detail = await InvestmentService.GetStockDetailAsync(symbol);
-            
-            if (detail != null && history.Any())
-            {
-                var relevantTxs = InvestmentService.Transactions.Where(t => t.Symbol == symbol).ToList();
-                
-                // Eğer hiç işlem yoksa, görseldeki gibi bir demo için 3 yıl öncesine alım ekleyelim
-                if (!relevantTxs.Any())
-                {
-                    relevantTxs.Add(new TransactionRecord 
-                    { 
-                        Symbol = symbol, 
-                        Date = DateTime.Today.AddYears(-3), 
-                        Quantity = 1000, 
-                        Price = history.FirstOrDefault(h => h.Date >= DateTime.Today.AddYears(-3))?.PriceTL ?? 15.0m 
-                    });
-                }
+            var labels = _portfolioQuotes.Select(p => p.Symbol).ToArray();
+            var data   = _portfolioQuotes.Select(p => (double)p.TotalValue).ToArray();
+            var colors = new[] { "#00d1ff", "#00ff85", "#ff8a12", "#bf5af2", "#ffd60a", "#ff4d6d", "#8ac4ff" };
 
-                _simResult = PortfolioSimulator.Simulate(
-                    symbol, 
-                    history, 
-                    detail.Dividends, 
-                    detail.Splits, 
-                    relevantTxs
-                );
-                
-                await Task.Delay(100);
-                await RenderCharts();
-            }
+            // Chart.js interop'u çağır - chartInterop.js içinde tanımlı
+            await _jsRuntime.InvokeVoidAsync("chartInterop.renderDoughnut",
+                "distributionChart", labels, data, colors);
         }
-        finally
+        catch (Exception ex)
         {
-            _isLoading = false;
-            StateHasChanged();
+            Console.WriteLine($"[YatirimTakip] Grafik çizim hatası: {ex.Message}");
         }
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    private void NavigateToDetail(string symbol)
     {
-        if (firstRender)
-        {
-            await ExploreStock();
-        }
-    }
-
-    private async Task RenderCharts()
-    {
-        if (_simResult == null) return;
-
-        // Fiyat Grafiği
-        var priceConfig = new {
-            type = "line",
-            data = new {
-                labels = _simResult.DailyPoints.Select(p => p.Date.ToString("MM.yy")),
-                datasets = new[] {
-                    new {
-                        label = "Fiyat (TL)",
-                        data = _simResult.DailyPoints.Select(p => p.PriceTL),
-                        borderColor = "#00d1ff",
-                        borderWidth = 2,
-                        pointRadius = 0,
-                        fill = true,
-                        backgroundColor = "rgba(0, 209, 255, 0.05)"
-                    }
-                }
-            },
-            options = new {
-                responsive = true,
-                maintainAspectRatio = false,
-                plugins = new { legend = new { display = false } },
-                scales = new {
-                    x = new { grid = new { display = false }, ticks = new { color = "rgba(255,255,255,0.3)", maxTicksLimit = 12 } },
-                    y = new { grid = new { color = "rgba(255,255,255,0.05)" }, ticks = new { color = "rgba(255,255,255,0.3)" } }
-                }
-            }
-        };
-
-        // Lot Gelişimi Grafiği
-        var lotConfig = new {
-            type = "bar",
-            data = new {
-                labels = _simResult.DailyPoints.Where((p, i) => i % 30 == 0).Select(p => p.Date.ToString("yyyy")),
-                datasets = new[] {
-                    new {
-                        label = "Toplam Lot",
-                        data = _simResult.DailyPoints.Where((p, i) => i % 30 == 0).Select(p => _simResult.TotalLots), // Mock logic for growth steps
-                        backgroundColor = "#30d158"
-                    }
-                }
-            },
-            options = new {
-                responsive = true,
-                maintainAspectRatio = false,
-                plugins = new { legend = new { display = false } }
-            }
-        };
-
-        await JS.InvokeVoidAsync("chartInterop.renderChart", "priceChart", priceConfig);
-        await JS.InvokeVoidAsync("chartInterop.renderChart", "lotChart", lotConfig);
+        NavManager.NavigateTo($"/hisse-detay/{symbol}");
     }
 }

@@ -6,26 +6,22 @@ using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddControllersWithViews();
+builder.Services.AddRazorPages();
+
 var googleClientId = builder.Configuration["Authentication:Google:ClientId"];
 var googleClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
 var googleCallbackPath = builder.Configuration["Authentication:Google:CallbackPath"];
 
 if (string.IsNullOrWhiteSpace(googleCallbackPath))
 {
-    googleCallbackPath = "/authentication/login-callback";
+    googleCallbackPath = "/signin-google";
 }
 
-if (string.IsNullOrWhiteSpace(googleClientId))
-{
-    throw new InvalidOperationException("Authentication:Google:ClientId eksik. Server appsettings veya ortam degiskenine ekleyin.");
-}
+var isGoogleConfigured = !string.IsNullOrWhiteSpace(googleClientId)
+    && !string.IsNullOrWhiteSpace(googleClientSecret);
 
-if (string.IsNullOrWhiteSpace(googleClientSecret))
-{
-    throw new InvalidOperationException("Authentication:Google:ClientSecret eksik. Bu degeri sadece server tarafinda User Secrets veya ortam degiskeni ile tanimlayin.");
-}
-
-builder.Services.AddAuthentication(options =>
+var authBuilder = builder.Services.AddAuthentication(options =>
 {
     options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
     options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
@@ -64,26 +60,30 @@ builder.Services.AddAuthentication(options =>
         context.Response.Redirect(context.RedirectUri);
         return Task.CompletedTask;
     };
-})
-.AddGoogle(options =>
-{
-    options.ClientId = googleClientId;
-    options.ClientSecret = googleClientSecret;
-    options.CallbackPath = googleCallbackPath;
-    options.SaveTokens = true;
-    options.Scope.Add("openid");
-    options.Scope.Add("profile");
-    options.Scope.Add("email");
-    options.ClaimActions.MapJsonKey("picture", "picture");
-
-    options.Events.OnRemoteFailure = context =>
-    {
-        var message = Uri.EscapeDataString(context.Failure?.Message ?? "Google OAuth hatasi olustu.");
-        context.Response.Redirect($"/login?error={message}");
-        context.HandleResponse();
-        return Task.CompletedTask;
-    };
 });
+
+if (isGoogleConfigured)
+{
+    authBuilder.AddGoogle(options =>
+    {
+        options.ClientId = googleClientId!;
+        options.ClientSecret = googleClientSecret!;
+        options.CallbackPath = googleCallbackPath;
+        options.SaveTokens = true;
+        options.Scope.Add("openid");
+        options.Scope.Add("profile");
+        options.Scope.Add("email");
+        options.ClaimActions.MapJsonKey("picture", "picture");
+
+        options.Events.OnRemoteFailure = context =>
+        {
+            var message = Uri.EscapeDataString(context.Failure?.Message ?? "Google OAuth hatasi olustu.");
+            context.Response.Redirect($"/login?error={message}");
+            context.HandleResponse();
+            return Task.CompletedTask;
+        };
+    });
+}
 
 builder.Services.AddAuthorization();
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
@@ -95,7 +95,11 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 
 var app = builder.Build();
 
-if (!app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment())
+{
+    app.UseWebAssemblyDebugging();
+}
+else
 {
     app.UseExceptionHandler("/Error");
     app.UseHsts();
@@ -106,11 +110,23 @@ app.UseHttpsRedirection();
 app.UseBlazorFrameworkFiles();
 app.UseStaticFiles();
 
+app.UseRouting();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapRazorPages();
+app.MapControllers();
+
 app.MapGet("/bff/login", (string? returnUrl) =>
 {
+    if (!isGoogleConfigured)
+    {
+        return Results.Problem(
+            "Google OAuth ayarlari eksik. Authentication:Google:ClientId ve Authentication:Google:ClientSecret degerlerini server tarafinda tanimlayin.",
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+
     var safeReturnUrl = NormalizeReturnUrl(returnUrl);
     var properties = new AuthenticationProperties
     {
@@ -142,6 +158,109 @@ app.MapGet("/bff/user", (ClaimsPrincipal user) =>
         .ToArray();
 
     return Results.Ok(new AuthUserResponse(true, claims));
+});
+
+app.MapGet("/api/stock/price/{symbol}", async (string symbol, string? date) =>
+{
+    using var client = new HttpClient();
+    client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+    client.Timeout = TimeSpan.FromSeconds(15);
+
+    try
+    {
+        var formattedSymbol = symbol.Trim().ToUpper();
+        if (!formattedSymbol.EndsWith(".IS")) formattedSymbol += ".IS";
+
+        string yahooUrl;
+
+        if (!string.IsNullOrEmpty(date) && DateTime.TryParse(date, out var targetDate))
+        {
+            var p1 = ((DateTimeOffset)DateTime.SpecifyKind(targetDate.Date.AddDays(-3), DateTimeKind.Local)).ToUnixTimeSeconds();
+            var p2 = ((DateTimeOffset)DateTime.SpecifyKind(targetDate.Date.AddDays(1), DateTimeKind.Local)).ToUnixTimeSeconds();
+            yahooUrl = $"https://query1.finance.yahoo.com/v8/finance/chart/{formattedSymbol}?period1={p1}&period2={p2}&interval=1d&includeAdjustedClose=false";
+        }
+        else
+        {
+            yahooUrl = $"https://query1.finance.yahoo.com/v8/finance/chart/{formattedSymbol}?interval=1d&range=5d&includeAdjustedClose=false";
+        }
+
+        var response = await client.GetAsync(yahooUrl);
+        if (!response.IsSuccessStatusCode)
+        {
+            yahooUrl = yahooUrl.Replace("query1", "query2");
+            response = await client.GetAsync(yahooUrl);
+        }
+
+        if (!response.IsSuccessStatusCode)
+            return Results.NotFound(new { error = "Yahoo Finance veri dondurmedi." });
+
+        var json = await response.Content.ReadAsStringAsync();
+        return Results.Content(json, "application/json");
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Istek basarisiz: {ex.Message}");
+    }
+});
+
+app.MapGet("/api/stock/range/{symbol}", async (string symbol, string from, string to) =>
+{
+    using var client = new HttpClient();
+    client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+    client.Timeout = TimeSpan.FromSeconds(15);
+
+    try
+    {
+        var formattedSymbol = symbol.Trim().ToUpper();
+        if (!formattedSymbol.EndsWith(".IS")) formattedSymbol += ".IS";
+
+        if (!DateTime.TryParse(from, out var fromDate) || !DateTime.TryParse(to, out var toDate))
+            return Results.BadRequest(new { error = "Gecersiz tarih." });
+
+        var p1 = ((DateTimeOffset)DateTime.SpecifyKind(fromDate.Date, DateTimeKind.Local)).ToUnixTimeSeconds();
+        var p2 = ((DateTimeOffset)DateTime.SpecifyKind(toDate.Date.AddDays(1), DateTimeKind.Local)).ToUnixTimeSeconds();
+        
+        var yahooUrl = $"https://query1.finance.yahoo.com/v8/finance/chart/{formattedSymbol}?period1={p1}&period2={p2}&interval=1d&includeAdjustedClose=false&events=div%7Csplit";
+        
+        var response = await client.GetAsync(yahooUrl);
+        if (!response.IsSuccessStatusCode)
+        {
+            yahooUrl = yahooUrl.Replace("query1", "query2");
+            response = await client.GetAsync(yahooUrl);
+        }
+
+        if (!response.IsSuccessStatusCode)
+            return Results.NotFound(new { error = "Veri bulunamadı." });
+
+        var json = await response.Content.ReadAsStringAsync();
+        return Results.Content(json, "application/json");
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Hata: {ex.Message}");
+    }
+});
+
+app.MapGet("/api/stock/dividends/{symbol}", async (string symbol) =>
+{
+    using var client = new HttpClient();
+    client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0");
+    var url = $"https://www.isyatirim.com.tr/_layouts/15/IsYatirim.Website/Common/Data.aspx/HisseTekilTemettu?hisse={symbol}";
+    try {
+        var json = await client.GetStringAsync(url);
+        return Results.Content(json, "application/json");
+    } catch (Exception ex) { return Results.Problem(ex.Message); }
+});
+
+app.MapGet("/api/stock/splits/{symbol}", async (string symbol) =>
+{
+    using var client = new HttpClient();
+    client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0");
+    var url = $"https://www.isyatirim.com.tr/_layouts/15/IsYatirim.Website/Common/Data.aspx/HisseTekilSermayeArtirimlari?hisse={symbol}";
+    try {
+        var json = await client.GetStringAsync(url);
+        return Results.Content(json, "application/json");
+    } catch (Exception ex) { return Results.Problem(ex.Message); }
 });
 
 app.MapFallbackToFile("index.html");
