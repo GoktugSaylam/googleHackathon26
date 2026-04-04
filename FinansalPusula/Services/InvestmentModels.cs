@@ -5,6 +5,7 @@ public interface IStockDataService
     Task<List<StockData>> GetStockQuotesAsync(List<string> symbols);
     Task<StockDetail?> GetStockDetailAsync(string symbol);
     bool IsValidBistSymbol(string symbol);
+    Task<List<HistoricalDataPoint>> GetHistoricalDataAsync(string symbol, DateTime from, DateTime to);
 }
 
 public class StockData
@@ -30,4 +31,69 @@ public class StockDetail
     public List<DividendHistory> Dividends { get; set; } = new();
     public List<SplitInfo> Splits { get; set; } = new();
     public decimal DripLots { get; set; }
+}
+
+// --- Yeni Simülasyon ve İşlem Modelleri ---
+
+public enum TransactionType { Buy, Sell }
+
+public class TransactionRecord
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string Symbol { get; set; } = "";
+    public DateTime Date { get; set; } = DateTime.Now;
+    public TransactionType Type { get; set; } = TransactionType.Buy;
+    public decimal Quantity { get; set; }
+    public decimal Price { get; set; }
+}
+
+public class HistoricalDataPoint
+{
+    public DateTime Date { get; set; }
+    public decimal PriceTL { get; set; }
+    public decimal PriceUSD { get; set; }
+}
+
+public class SimulationResult
+{
+    public string Symbol { get; set; } = "";
+    public List<HistoricalDataPoint> DailyPoints { get; set; } = new();
+    public List<YearlySummary> YearlySummaries { get; set; } = new();
+    public List<DetailedDividendEvent> DividendEvents { get; set; } = new();
+    
+    // Özet Metrikler
+    public decimal TotalInvestedTL { get; set; }
+    public decimal TotalInvestedUSD { get; set; }
+    public decimal CurrentValueTL { get; set; }
+    public decimal CurrentValueUSD { get; set; }
+    public decimal TotalLots { get; set; }
+    public decimal DripLots { get; set; }
+    public decimal TotalNetDividendTL { get; set; }
+    public decimal TotalNetDividendUSD { get; set; }
+    public decimal AvgCostTL => TotalLots > 0 ? TotalInvestedTL / TotalLots : 0;
+    public decimal AvgCostUSD => TotalLots > 0 ? TotalInvestedUSD / TotalLots : 0;
+}
+
+public class YearlySummary
+{
+    public int Year { get; set; }
+    public decimal LotCount { get; set; }
+    public decimal NetDividendTL { get; set; }
+    public decimal ValueIncreaseTL { get; set; }
+    public decimal IncreasePercentage { get; set; }
+    public decimal YearEndValueTL { get; set; }
+    public decimal YearEndValueUSD { get; set; }
+}
+
+public class DetailedDividendEvent
+{
+    public DateTime Date { get; set; }
+    public decimal DividendPerShare { get; set; }
+    public decimal OwnedLots { get; set; }
+    public decimal GrossIncome { get; set; }
+    public decimal TaxAmount => GrossIncome * 0.10m;
+    public decimal NetIncome => GrossIncome * 0.90m;
+    public decimal BuyPriceT2 { get; set; }
+    public decimal LotsBought { get; set; }
+    public decimal RemainingCash { get; set; }
 }

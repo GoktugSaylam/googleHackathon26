@@ -1,0 +1,158 @@
+@page "/islemler"
+@using FinansalPusula.Services
+@inject InvestmentService InvestmentService
+
+<PageTitle>İşlemler - Finansal Pusula</PageTitle>
+
+<div class="container-fluid animate-fade-in">
+    <div class="row">
+        <div class="col-xl-10 mx-auto">
+            <div class="d-flex justify-content-between align-items-center mb-5 mt-4">
+                <div>
+                    <h2 class="fw-bold mb-1">Portföy İşlemleri</h2>
+                    <p class="text-muted mb-0">Hisse alım ve satım kayıtlarınızı yönetin.</p>
+                </div>
+                <button class="btn btn-primary-glass px-4" @onclick="OpenAddModal">
+                    <i class="bi bi-plus-lg me-2"></i> Yeni İşlem Ekle
+                </button>
+            </div>
+
+            <div class="glass-card">
+                <div class="table-responsive">
+                    <table class="table table-glass align-middle">
+                        <thead>
+                            <tr>
+                                <th>Tarih</th>
+                                <th>Hisse</th>
+                                <th>Tip</th>
+                                <th class="text-end">Miktar (Lot)</th>
+                                <th class="text-end">Birim Fiyat</th>
+                                <th class="text-end">Toplam Tutar</th>
+                                <th class="text-center">İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!InvestmentService.Transactions.Any())
+                            {
+                                <tr>
+                                    <td colspan="7" class="text-center py-5 text-muted">
+                                        Henüz bir işlem kaydı bulunmuyor.
+                                    </td>
+                                </tr>
+                            }
+                            @foreach (var tx in InvestmentService.Transactions.OrderByDescending(t => t.Date))
+                            {
+                                <tr>
+                                    <td>@tx.Date.ToShortDateString()</td>
+                                    <td class="fw-bold text-primary">@tx.Symbol</td>
+                                    <td>
+                                        <span class="badge @(tx.Type == TransactionType.Buy ? "bg-success" : "bg-danger") bg-opacity-10 @(tx.Type == TransactionType.Buy ? "text-success" : "text-danger") px-3">
+                                            @(tx.Type == TransactionType.Buy ? "ALIM" : "SATIM")
+                                        </span>
+                                    </td>
+                                    <td class="text-end">@tx.Quantity.ToString("N0")</td>
+                                    <td class="text-end">@tx.Price.ToString("N2") ₺</td>
+                                    <td class="text-end fw-bold">@((tx.Quantity * tx.Price).ToString("N2")) ₺</td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-link text-danger" @onclick="() => DeleteTransaction(tx.Id)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (_showAddModal)
+{
+    <div class="modal fade show d-block animate-fade-in" style="background: rgba(0,0,0,0.7); backdrop-filter: blur(5px);" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content glass-modal">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">@( _isEdit ? "İşlemi Düzenle" : "Yeni İşlem Kaydı")</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseAddModal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label small text-muted">Hisse Kodu</label>
+                            <input type="text" class="form-control glass-input" list="bistSymbols" @bind="_newTx.Symbol" placeholder="Örn: TUPRS" />
+                            <datalist id="bistSymbols">
+                                @foreach (var stock in BistDataService.AllStocks)
+                                {
+                                    <option value="@stock.Symbol">@stock.Name</option>
+                                }
+                            </datalist>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted">İşlem Tipi</label>
+                            <select class="form-select glass-input" @bind="_newTx.Type">
+                                <option value="@TransactionType.Buy">ALIM</option>
+                                <option value="@TransactionType.Sell">SATIM</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted">İşlem Tarihi</label>
+                            <input type="date" class="form-control glass-input" @bind="_newTx.Date" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted">Miktar (Lot)</label>
+                            <input type="number" class="form-control glass-input" @bind="_newTx.Quantity" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted">Birim Fiyat (₺)</label>
+                            <input type="number" step="0.01" class="form-control glass-input" @bind="_newTx.Price" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link text-white text-decoration-none" @onclick="CloseAddModal">Vazgeç</button>
+                    <button type="button" class="btn btn-primary-glass px-4" @onclick="SaveTransaction">Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool _showAddModal = false;
+    private bool _isEdit = false;
+    private TransactionRecord _newTx = new();
+
+    private void OpenAddModal()
+    {
+        _newTx = new TransactionRecord { Date = DateTime.Today };
+        _isEdit = false;
+        _showAddModal = true;
+    }
+
+    private void CloseAddModal() => _showAddModal = false;
+
+    private void SaveTransaction()
+    {
+        if (string.IsNullOrWhiteSpace(_newTx.Symbol)) return;
+        
+        var symbol = _newTx.Symbol.Trim().ToUpper();
+        if (!symbol.EndsWith(".IS")) symbol += ".IS";
+        _newTx.Symbol = symbol;
+
+        InvestmentService.Transactions.Add(_newTx);
+        _showAddModal = false;
+        StateHasChanged();
+    }
+
+    private void DeleteTransaction(Guid id)
+    {
+        var tx = InvestmentService.Transactions.FirstOrDefault(t => t.Id == id);
+        if (tx != null)
+        {
+            InvestmentService.Transactions.Remove(tx);
+            StateHasChanged();
+        }
+    }
+}
