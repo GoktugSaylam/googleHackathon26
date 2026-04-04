@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "PygTaf5bHjOeuCl1Ko+OznWTE+ZAh8PXuPk6IYyBbh0=",
+  "Hash": "6V/zEdwn9iA2q4cGHVQQr/1BF3mGcszFEOWCee73rMs=",
   "Source": "FinansalPusula",
   "BasePath": "/",
   "Mode": "Root",
@@ -31,8 +31,8 @@
       "RelatedAsset": "",
       "AssetTraitName": "WasmResource",
       "AssetTraitValue": "manifest",
-      "Fingerprint": "6aoew35907",
-      "Integrity": "kvFZC1IKnL+GpG5AvE1gbVvLCWT9s2G7QkxyOejV5jg=",
+      "Fingerprint": "ikmm7v13nr",
+      "Integrity": "wi5aQNWRZu9o5IWzdfxby1Vd+p578mDcne5dfqIBHns=",
       "CopyToOutputDirectory": "PreserveNewest",
       "CopyToPublishDirectory": "Never",
       "OriginalItemSpec": "obj\\Debug\\net8.0\\blazor.boot.json"
@@ -220,8 +220,8 @@
       "RelatedAsset": "",
       "AssetTraitName": "WasmResource",
       "AssetTraitValue": "symbol",
-      "Fingerprint": "3dzdpt0uir",
-      "Integrity": "uT6HmAoLoZTcp10BKUrWiRgDXtOVlvapqyA0czfI5Lk=",
+      "Fingerprint": "eu5hvh5ncm",
+      "Integrity": "KlWt8wXj2OCPtqT3AAoZxRSRalb+JDkwOxhq7coSUXw=",
       "CopyToOutputDirectory": "PreserveNewest",
       "CopyToPublishDirectory": "Never",
       "OriginalItemSpec": "obj\\Debug\\net8.0\\FinansalPusula.pdb"
@@ -241,8 +241,8 @@
       "RelatedAsset": "",
       "AssetTraitName": "WasmResource",
       "AssetTraitValue": "runtime",
-      "Fingerprint": "j3hcjiqr1v",
-      "Integrity": "cUN7OjCrgTGvHgLrITybfhC/ghbcN8MrFtCITNOUF1c=",
+      "Fingerprint": "9cjy40pc60",
+      "Integrity": "l1VH0HHr6nXFYK00w9X7eMBk/YyKsWZWExdrO4ib3s4=",
       "CopyToOutputDirectory": "PreserveNewest",
       "CopyToPublishDirectory": "Never",
       "OriginalItemSpec": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\obj\\Debug\\net8.0\\webcil\\FinansalPusula.wasm"
@@ -5876,7 +5876,7 @@
       "OriginalItemSpec": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\bin\\Debug\\net8.0\\wwwroot\\_framework\\System.Threading.Timer.wasm"
     },
     {
-      "Identity": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\obj\\Debug\\net8.0\\compressed\\da72g1jh3z-3dzdpt0uir.gz",
+      "Identity": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\obj\\Debug\\net8.0\\compressed\\da72g1jh3z-eu5hvh5ncm.gz",
       "SourceId": "FinansalPusula",
       "SourceType": "Computed",
       "ContentRoot": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\obj\\Debug\\net8.0\\compressed\\",
@@ -5890,8 +5890,8 @@
       "RelatedAsset": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\bin\\Debug\\net8.0\\wwwroot\\_framework\\FinansalPusula.pdb",
       "AssetTraitName": "Content-Encoding",
       "AssetTraitValue": "gzip",
-      "Fingerprint": "xjtuoinq0n",
-      "Integrity": "HYF1uOATMQkyLJnfHGan1zm58oI4/oNRmpU4hZUzBV8=",
+      "Fingerprint": "1w4qu5dago",
+      "Integrity": "Qf1KuNGdPmgDzHgfB3jyVKYZHBKu2WtPI+cjkklDUmU=",
       "CopyToOutputDirectory": "PreserveNewest",
       "CopyToPublishDirectory": "Never",
       "OriginalItemSpec": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\bin\\Debug\\net8.0\\wwwroot\\_framework\\FinansalPusula.pdb"
@@ -7241,7 +7241,7 @@
       "OriginalItemSpec": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\bin\\Debug\\net8.0\\wwwroot\\_framework\\System.Runtime.InteropServices.RuntimeInformation.wasm"
     },
     {
-      "Identity": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\obj\\Debug\\net8.0\\compressed\\o45d2xaq4v-j3hcjiqr1v.gz",
+      "Identity": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\obj\\Debug\\net8.0\\compressed\\o45d2xaq4v-9cjy40pc60.gz",
       "SourceId": "FinansalPusula",
       "SourceType": "Computed",
       "ContentRoot": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\obj\\Debug\\net8.0\\compressed\\",
@@ -7255,8 +7255,8 @@
       "RelatedAsset": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\bin\\Debug\\net8.0\\wwwroot\\_framework\\FinansalPusula.wasm",
       "AssetTraitName": "Content-Encoding",
       "AssetTraitValue": "gzip",
-      "Fingerprint": "953sr8jbvz",
-      "Integrity": "E/ZcTE8qjIasU9jildak4V7VcUDx9jiq2xh3miS+G6Q=",
+      "Fingerprint": "3u9286f7uy",
+      "Integrity": "Sy76ZGmbxDITcHKnR1Ctie8top6UMejkBuuRixCpg/Q=",
       "CopyToOutputDirectory": "PreserveNewest",
       "CopyToPublishDirectory": "Never",
       "OriginalItemSpec": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\bin\\Debug\\net8.0\\wwwroot\\_framework\\FinansalPusula.wasm"
@@ -8606,7 +8606,7 @@
       "OriginalItemSpec": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\bin\\Debug\\net8.0\\wwwroot\\_framework\\System.Reflection.Emit.wasm"
     },
     {
-      "Identity": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\obj\\Debug\\net8.0\\compressed\\zsskahf6ff-6aoew35907.gz",
+      "Identity": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\obj\\Debug\\net8.0\\compressed\\zsskahf6ff-ikmm7v13nr.gz",
       "SourceId": "FinansalPusula",
       "SourceType": "Computed",
       "ContentRoot": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\obj\\Debug\\net8.0\\compressed\\",
@@ -8620,8 +8620,8 @@
       "RelatedAsset": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\bin\\Debug\\net8.0\\wwwroot\\_framework\\blazor.boot.json",
       "AssetTraitName": "Content-Encoding",
       "AssetTraitValue": "gzip",
-      "Fingerprint": "qn900vsba2",
-      "Integrity": "5oy+HcPZYkcsF5f6LxsDyKUJ2Y6qkRFRcveSnPcogUE=",
+      "Fingerprint": "ucea8dq406",
+      "Integrity": "0pwIBL8XL9SzBQb4DP/8K7TbvlA7UVK6off9ONyQ9WA=",
       "CopyToOutputDirectory": "PreserveNewest",
       "CopyToPublishDirectory": "Never",
       "OriginalItemSpec": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\bin\\Debug\\net8.0\\wwwroot\\_framework\\blazor.boot.json"
@@ -8683,8 +8683,8 @@
       "RelatedAsset": "",
       "AssetTraitName": "BlazorServiceWorker",
       "AssetTraitValue": "ServiceWorkerManifest",
-      "Fingerprint": "lz8m6o51p5",
-      "Integrity": "AY2fbwhqDNx8yEdmeG3l1y1abidqYvyAD0dDbr8XYZw=",
+      "Fingerprint": "xtp1tttd91",
+      "Integrity": "BRqouci0O5dJEpVCl03wx2LS6YTQ6k2gFyce4Ta6f1M=",
       "CopyToOutputDirectory": "PreserveNewest",
       "CopyToPublishDirectory": "Never",
       "OriginalItemSpec": "obj\\Debug\\net8.0\\service-worker\\service-worker-assets.js.build"
@@ -8704,11 +8704,32 @@
       "RelatedAsset": "",
       "AssetTraitName": "BlazorServiceWorker",
       "AssetTraitValue": "ServiceWorkerJs",
-      "Fingerprint": "x5umerh1qd",
-      "Integrity": "NayiyqTDGgB8EL4fzXQlxN3Md9wApdqqbSnlyBpnxtM=",
+      "Fingerprint": "2zvoe78tqz",
+      "Integrity": "Ij6hHNElJW7sCAfiMedoGT9UDGWXAAT0As3ru3M0PFU=",
       "CopyToOutputDirectory": "PreserveNewest",
       "CopyToPublishDirectory": "Never",
       "OriginalItemSpec": "wwwroot\\service-worker.js"
+    },
+    {
+      "Identity": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\wwwroot\\appsettings.Development.json",
+      "SourceId": "FinansalPusula",
+      "SourceType": "Discovered",
+      "ContentRoot": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\wwwroot\\",
+      "BasePath": "/",
+      "RelativePath": "appsettings.Development#[.{fingerprint}]?.json",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "WasmResource",
+      "AssetTraitValue": "settings",
+      "Fingerprint": "b5ftwu0aiu",
+      "Integrity": "ETbPeRd8K1CAbG3KSQS1kYg+wpIgNao3kSHg0+01A1I=",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\appsettings.Development.json"
     },
     {
       "Identity": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\wwwroot\\appsettings.json",
@@ -8746,8 +8767,8 @@
       "RelatedAsset": "",
       "AssetTraitName": "",
       "AssetTraitValue": "",
-      "Fingerprint": "n255rhpoo9",
-      "Integrity": "7xd3MFGIohxpf9cMHwJtU6XDSgz2+5CLXJxZo+Rj/AM=",
+      "Fingerprint": "0np4g7lj5d",
+      "Integrity": "zPaLeseZq6gIDFdffTHNEbVK5/KVwi/6qHKMCUcUal4=",
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "wwwroot\\css\\app.css"
@@ -8933,7 +8954,7 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "19700"
+          "Value": "19740"
         },
         {
           "Name": "Content-Type",
@@ -8941,11 +8962,11 @@
         },
         {
           "Name": "ETag",
-          "Value": "\"kvFZC1IKnL+GpG5AvE1gbVvLCWT9s2G7QkxyOejV5jg=\""
+          "Value": "\"wi5aQNWRZu9o5IWzdfxby1Vd+p578mDcne5dfqIBHns=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Sat, 04 Apr 2026 13:33:29 GMT"
+          "Value": "Sat, 04 Apr 2026 14:45:01 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -8955,18 +8976,18 @@
       "EndpointProperties": [
         {
           "Name": "integrity",
-          "Value": "sha256-kvFZC1IKnL+GpG5AvE1gbVvLCWT9s2G7QkxyOejV5jg="
+          "Value": "sha256-wi5aQNWRZu9o5IWzdfxby1Vd+p578mDcne5dfqIBHns="
         }
       ]
     },
     {
       "Route": "_framework/blazor.boot.json",
-      "AssetFile": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\obj\\Debug\\net8.0\\compressed\\zsskahf6ff-6aoew35907.gz",
+      "AssetFile": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\obj\\Debug\\net8.0\\compressed\\zsskahf6ff-ikmm7v13nr.gz",
       "Selectors": [
         {
           "Name": "Content-Encoding",
           "Value": "gzip",
-          "Quality": "0.000114626318"
+          "Quality": "0.000114442664"
         }
       ],
       "ResponseHeaders": [
@@ -8976,15 +8997,15 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "8723"
+          "Value": "8737"
         },
         {
           "Name": "ETag",
-          "Value": "\"5oy+HcPZYkcsF5f6LxsDyKUJ2Y6qkRFRcveSnPcogUE=\""
+          "Value": "\"0pwIBL8XL9SzBQb4DP/8K7TbvlA7UVK6off9ONyQ9WA=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Sat, 04 Apr 2026 13:33:08 GMT"
+          "Value": "Sat, 04 Apr 2026 14:30:08 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -9004,19 +9025,19 @@
         },
         {
           "Name": "ETag",
-          "Value": "W/\"kvFZC1IKnL+GpG5AvE1gbVvLCWT9s2G7QkxyOejV5jg=\""
+          "Value": "W/\"wi5aQNWRZu9o5IWzdfxby1Vd+p578mDcne5dfqIBHns=\""
         }
       ],
       "EndpointProperties": [
         {
           "Name": "integrity",
-          "Value": "sha256-kvFZC1IKnL+GpG5AvE1gbVvLCWT9s2G7QkxyOejV5jg="
+          "Value": "sha256-wi5aQNWRZu9o5IWzdfxby1Vd+p578mDcne5dfqIBHns="
         }
       ]
     },
     {
       "Route": "_framework/blazor.boot.json.gz",
-      "AssetFile": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\obj\\Debug\\net8.0\\compressed\\zsskahf6ff-6aoew35907.gz",
+      "AssetFile": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\obj\\Debug\\net8.0\\compressed\\zsskahf6ff-ikmm7v13nr.gz",
       "Selectors": [],
       "ResponseHeaders": [
         {
@@ -9025,7 +9046,7 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "8723"
+          "Value": "8737"
         },
         {
           "Name": "Content-Type",
@@ -9033,11 +9054,11 @@
         },
         {
           "Name": "ETag",
-          "Value": "\"5oy+HcPZYkcsF5f6LxsDyKUJ2Y6qkRFRcveSnPcogUE=\""
+          "Value": "\"0pwIBL8XL9SzBQb4DP/8K7TbvlA7UVK6off9ONyQ9WA=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Sat, 04 Apr 2026 13:33:08 GMT"
+          "Value": "Sat, 04 Apr 2026 14:30:08 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -9055,7 +9076,7 @@
       "EndpointProperties": [
         {
           "Name": "integrity",
-          "Value": "sha256-5oy+HcPZYkcsF5f6LxsDyKUJ2Y6qkRFRcveSnPcogUE="
+          "Value": "sha256-0pwIBL8XL9SzBQb4DP/8K7TbvlA7UVK6off9ONyQ9WA="
         }
       ]
     },
@@ -10166,7 +10187,7 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "46100"
+          "Value": "58424"
         },
         {
           "Name": "Content-Type",
@@ -10174,11 +10195,11 @@
         },
         {
           "Name": "ETag",
-          "Value": "\"uT6HmAoLoZTcp10BKUrWiRgDXtOVlvapqyA0czfI5Lk=\""
+          "Value": "\"KlWt8wXj2OCPtqT3AAoZxRSRalb+JDkwOxhq7coSUXw=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Sat, 04 Apr 2026 13:32:10 GMT"
+          "Value": "Sat, 04 Apr 2026 14:30:07 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -10188,18 +10209,18 @@
       "EndpointProperties": [
         {
           "Name": "integrity",
-          "Value": "sha256-uT6HmAoLoZTcp10BKUrWiRgDXtOVlvapqyA0czfI5Lk="
+          "Value": "sha256-KlWt8wXj2OCPtqT3AAoZxRSRalb+JDkwOxhq7coSUXw="
         }
       ]
     },
     {
       "Route": "_framework/FinansalPusula.pdb",
-      "AssetFile": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\obj\\Debug\\net8.0\\compressed\\da72g1jh3z-3dzdpt0uir.gz",
+      "AssetFile": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\obj\\Debug\\net8.0\\compressed\\da72g1jh3z-eu5hvh5ncm.gz",
       "Selectors": [
         {
           "Name": "Content-Encoding",
           "Value": "gzip",
-          "Quality": "0.000028373624"
+          "Quality": "0.000023245543"
         }
       ],
       "ResponseHeaders": [
@@ -10209,15 +10230,15 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "35243"
+          "Value": "43018"
         },
         {
           "Name": "ETag",
-          "Value": "\"HYF1uOATMQkyLJnfHGan1zm58oI4/oNRmpU4hZUzBV8=\""
+          "Value": "\"Qf1KuNGdPmgDzHgfB3jyVKYZHBKu2WtPI+cjkklDUmU=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Sat, 04 Apr 2026 13:32:10 GMT"
+          "Value": "Sat, 04 Apr 2026 14:30:07 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -10237,19 +10258,19 @@
         },
         {
           "Name": "ETag",
-          "Value": "W/\"uT6HmAoLoZTcp10BKUrWiRgDXtOVlvapqyA0czfI5Lk=\""
+          "Value": "W/\"KlWt8wXj2OCPtqT3AAoZxRSRalb+JDkwOxhq7coSUXw=\""
         }
       ],
       "EndpointProperties": [
         {
           "Name": "integrity",
-          "Value": "sha256-uT6HmAoLoZTcp10BKUrWiRgDXtOVlvapqyA0czfI5Lk="
+          "Value": "sha256-KlWt8wXj2OCPtqT3AAoZxRSRalb+JDkwOxhq7coSUXw="
         }
       ]
     },
     {
       "Route": "_framework/FinansalPusula.pdb.gz",
-      "AssetFile": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\obj\\Debug\\net8.0\\compressed\\da72g1jh3z-3dzdpt0uir.gz",
+      "AssetFile": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\obj\\Debug\\net8.0\\compressed\\da72g1jh3z-eu5hvh5ncm.gz",
       "Selectors": [],
       "ResponseHeaders": [
         {
@@ -10258,7 +10279,7 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "35243"
+          "Value": "43018"
         },
         {
           "Name": "Content-Type",
@@ -10266,11 +10287,11 @@
         },
         {
           "Name": "ETag",
-          "Value": "\"HYF1uOATMQkyLJnfHGan1zm58oI4/oNRmpU4hZUzBV8=\""
+          "Value": "\"Qf1KuNGdPmgDzHgfB3jyVKYZHBKu2WtPI+cjkklDUmU=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Sat, 04 Apr 2026 13:32:10 GMT"
+          "Value": "Sat, 04 Apr 2026 14:30:07 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -10288,7 +10309,7 @@
       "EndpointProperties": [
         {
           "Name": "integrity",
-          "Value": "sha256-HYF1uOATMQkyLJnfHGan1zm58oI4/oNRmpU4hZUzBV8="
+          "Value": "sha256-Qf1KuNGdPmgDzHgfB3jyVKYZHBKu2WtPI+cjkklDUmU="
         }
       ]
     },
@@ -10303,7 +10324,7 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "91413"
+          "Value": "160533"
         },
         {
           "Name": "Content-Type",
@@ -10311,11 +10332,11 @@
         },
         {
           "Name": "ETag",
-          "Value": "\"cUN7OjCrgTGvHgLrITybfhC/ghbcN8MrFtCITNOUF1c=\""
+          "Value": "\"l1VH0HHr6nXFYK00w9X7eMBk/YyKsWZWExdrO4ib3s4=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Sat, 04 Apr 2026 13:32:11 GMT"
+          "Value": "Sat, 04 Apr 2026 14:30:07 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -10325,18 +10346,18 @@
       "EndpointProperties": [
         {
           "Name": "integrity",
-          "Value": "sha256-cUN7OjCrgTGvHgLrITybfhC/ghbcN8MrFtCITNOUF1c="
+          "Value": "sha256-l1VH0HHr6nXFYK00w9X7eMBk/YyKsWZWExdrO4ib3s4="
         }
       ]
     },
     {
       "Route": "_framework/FinansalPusula.wasm",
-      "AssetFile": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\obj\\Debug\\net8.0\\compressed\\o45d2xaq4v-j3hcjiqr1v.gz",
+      "AssetFile": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\obj\\Debug\\net8.0\\compressed\\o45d2xaq4v-9cjy40pc60.gz",
       "Selectors": [
         {
           "Name": "Content-Encoding",
           "Value": "gzip",
-          "Quality": "0.000033169696"
+          "Quality": "0.000018587361"
         }
       ],
       "ResponseHeaders": [
@@ -10346,15 +10367,15 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "30147"
+          "Value": "53799"
         },
         {
           "Name": "ETag",
-          "Value": "\"E/ZcTE8qjIasU9jildak4V7VcUDx9jiq2xh3miS+G6Q=\""
+          "Value": "\"Sy76ZGmbxDITcHKnR1Ctie8top6UMejkBuuRixCpg/Q=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Sat, 04 Apr 2026 13:32:11 GMT"
+          "Value": "Sat, 04 Apr 2026 14:30:07 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -10374,19 +10395,19 @@
         },
         {
           "Name": "ETag",
-          "Value": "W/\"cUN7OjCrgTGvHgLrITybfhC/ghbcN8MrFtCITNOUF1c=\""
+          "Value": "W/\"l1VH0HHr6nXFYK00w9X7eMBk/YyKsWZWExdrO4ib3s4=\""
         }
       ],
       "EndpointProperties": [
         {
           "Name": "integrity",
-          "Value": "sha256-cUN7OjCrgTGvHgLrITybfhC/ghbcN8MrFtCITNOUF1c="
+          "Value": "sha256-l1VH0HHr6nXFYK00w9X7eMBk/YyKsWZWExdrO4ib3s4="
         }
       ]
     },
     {
       "Route": "_framework/FinansalPusula.wasm.gz",
-      "AssetFile": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\obj\\Debug\\net8.0\\compressed\\o45d2xaq4v-j3hcjiqr1v.gz",
+      "AssetFile": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\obj\\Debug\\net8.0\\compressed\\o45d2xaq4v-9cjy40pc60.gz",
       "Selectors": [],
       "ResponseHeaders": [
         {
@@ -10395,7 +10416,7 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "30147"
+          "Value": "53799"
         },
         {
           "Name": "Content-Type",
@@ -10403,11 +10424,11 @@
         },
         {
           "Name": "ETag",
-          "Value": "\"E/ZcTE8qjIasU9jildak4V7VcUDx9jiq2xh3miS+G6Q=\""
+          "Value": "\"Sy76ZGmbxDITcHKnR1Ctie8top6UMejkBuuRixCpg/Q=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Sat, 04 Apr 2026 13:32:11 GMT"
+          "Value": "Sat, 04 Apr 2026 14:30:07 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -10425,7 +10446,7 @@
       "EndpointProperties": [
         {
           "Name": "integrity",
-          "Value": "sha256-E/ZcTE8qjIasU9jildak4V7VcUDx9jiq2xh3miS+G6Q="
+          "Value": "sha256-Sy76ZGmbxDITcHKnR1Ctie8top6UMejkBuuRixCpg/Q="
         }
       ]
     },
@@ -37008,6 +37029,88 @@
       ]
     },
     {
+      "Route": "appsettings.Development.b5ftwu0aiu.json",
+      "AssetFile": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\wwwroot\\appsettings.Development.json",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "124"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "application/json"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"ETbPeRd8K1CAbG3KSQS1kYg+wpIgNao3kSHg0+01A1I=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Sat, 04 Apr 2026 14:27:56 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "max-age=31536000, immutable"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "fingerprint",
+          "Value": "b5ftwu0aiu"
+        },
+        {
+          "Name": "label",
+          "Value": "appsettings.Development.json"
+        },
+        {
+          "Name": "integrity",
+          "Value": "sha256-ETbPeRd8K1CAbG3KSQS1kYg+wpIgNao3kSHg0+01A1I="
+        }
+      ]
+    },
+    {
+      "Route": "appsettings.Development.json",
+      "AssetFile": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\wwwroot\\appsettings.Development.json",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "124"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "application/json"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"ETbPeRd8K1CAbG3KSQS1kYg+wpIgNao3kSHg0+01A1I=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Sat, 04 Apr 2026 14:27:56 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "no-cache"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "integrity",
+          "Value": "sha256-ETbPeRd8K1CAbG3KSQS1kYg+wpIgNao3kSHg0+01A1I="
+        }
+      ]
+    },
+    {
       "Route": "appsettings.json",
       "AssetFile": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\wwwroot\\appsettings.json",
       "Selectors": [],
@@ -37090,6 +37193,51 @@
       ]
     },
     {
+      "Route": "css/app.0np4g7lj5d.css",
+      "AssetFile": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\wwwroot\\css\\app.css",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "5222"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "text/css"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"zPaLeseZq6gIDFdffTHNEbVK5/KVwi/6qHKMCUcUal4=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Sat, 04 Apr 2026 14:22:09 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "max-age=31536000, immutable"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "fingerprint",
+          "Value": "0np4g7lj5d"
+        },
+        {
+          "Name": "label",
+          "Value": "css/app.css"
+        },
+        {
+          "Name": "integrity",
+          "Value": "sha256-zPaLeseZq6gIDFdffTHNEbVK5/KVwi/6qHKMCUcUal4="
+        }
+      ]
+    },
+    {
       "Route": "css/app.css",
       "AssetFile": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\wwwroot\\css\\app.css",
       "Selectors": [],
@@ -37100,7 +37248,7 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "3655"
+          "Value": "5222"
         },
         {
           "Name": "Content-Type",
@@ -37108,11 +37256,11 @@
         },
         {
           "Name": "ETag",
-          "Value": "\"7xd3MFGIohxpf9cMHwJtU6XDSgz2+5CLXJxZo+Rj/AM=\""
+          "Value": "\"zPaLeseZq6gIDFdffTHNEbVK5/KVwi/6qHKMCUcUal4=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Sat, 04 Apr 2026 12:25:14 GMT"
+          "Value": "Sat, 04 Apr 2026 14:22:09 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -37122,52 +37270,7 @@
       "EndpointProperties": [
         {
           "Name": "integrity",
-          "Value": "sha256-7xd3MFGIohxpf9cMHwJtU6XDSgz2+5CLXJxZo+Rj/AM="
-        }
-      ]
-    },
-    {
-      "Route": "css/app.n255rhpoo9.css",
-      "AssetFile": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\wwwroot\\css\\app.css",
-      "Selectors": [],
-      "ResponseHeaders": [
-        {
-          "Name": "Accept-Ranges",
-          "Value": "bytes"
-        },
-        {
-          "Name": "Content-Length",
-          "Value": "3655"
-        },
-        {
-          "Name": "Content-Type",
-          "Value": "text/css"
-        },
-        {
-          "Name": "ETag",
-          "Value": "\"7xd3MFGIohxpf9cMHwJtU6XDSgz2+5CLXJxZo+Rj/AM=\""
-        },
-        {
-          "Name": "Last-Modified",
-          "Value": "Sat, 04 Apr 2026 12:25:14 GMT"
-        },
-        {
-          "Name": "Cache-Control",
-          "Value": "max-age=31536000, immutable"
-        }
-      ],
-      "EndpointProperties": [
-        {
-          "Name": "fingerprint",
-          "Value": "n255rhpoo9"
-        },
-        {
-          "Name": "label",
-          "Value": "css/app.css"
-        },
-        {
-          "Name": "integrity",
-          "Value": "sha256-7xd3MFGIohxpf9cMHwJtU6XDSgz2+5CLXJxZo+Rj/AM="
+          "Value": "sha256-zPaLeseZq6gIDFdffTHNEbVK5/KVwi/6qHKMCUcUal4="
         }
       ]
     },
@@ -38002,7 +38105,7 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "30725"
+          "Value": "30855"
         },
         {
           "Name": "Content-Type",
@@ -38010,11 +38113,11 @@
         },
         {
           "Name": "ETag",
-          "Value": "\"AY2fbwhqDNx8yEdmeG3l1y1abidqYvyAD0dDbr8XYZw=\""
+          "Value": "\"BRqouci0O5dJEpVCl03wx2LS6YTQ6k2gFyce4Ta6f1M=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Sat, 04 Apr 2026 13:32:12 GMT"
+          "Value": "Sat, 04 Apr 2026 14:30:08 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -38024,7 +38127,7 @@
       "EndpointProperties": [
         {
           "Name": "integrity",
-          "Value": "sha256-AY2fbwhqDNx8yEdmeG3l1y1abidqYvyAD0dDbr8XYZw="
+          "Value": "sha256-BRqouci0O5dJEpVCl03wx2LS6YTQ6k2gFyce4Ta6f1M="
         }
       ]
     },
@@ -38047,7 +38150,7 @@
         },
         {
           "Name": "ETag",
-          "Value": "\"NayiyqTDGgB8EL4fzXQlxN3Md9wApdqqbSnlyBpnxtM=\""
+          "Value": "\"Ij6hHNElJW7sCAfiMedoGT9UDGWXAAT0As3ru3M0PFU=\""
         },
         {
           "Name": "Last-Modified",
@@ -38061,7 +38164,7 @@
       "EndpointProperties": [
         {
           "Name": "integrity",
-          "Value": "sha256-NayiyqTDGgB8EL4fzXQlxN3Md9wApdqqbSnlyBpnxtM="
+          "Value": "sha256-Ij6hHNElJW7sCAfiMedoGT9UDGWXAAT0As3ru3M0PFU="
         }
       ]
     }

@@ -7,26 +7,86 @@
 
 <div class="container-fluid animate-fade-in">
     <div class="row">
-        <div class="col-xl-10 offset-xl-1">
-            <div class="d-flex align-items-center mb-5 mt-4">
-                <div class="p-3 rounded-4 bg-primary bg-opacity-10 me-4">
-                    <i class="bi bi-graph-up-arrow text-primary fs-2"></i>
+        <div class="col-xl-11 mx-auto">
+            <!-- Header Section -->
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-5 mt-4 gap-4">
+                <div class="d-flex align-items-center">
+                    <div class="p-3 rounded-4 bg-primary bg-opacity-10 me-4">
+                        <i class="bi bi-graph-up-arrow text-primary fs-2"></i>
+                    </div>
+                    <div>
+                        <h1 class="fw-bold mb-1">HisseMetre Dashboard</h1>
+                        <p class="text-muted mb-0">BIST portföyünüzün anlık durumu ve yapay zeka analizleri.</p>
+                    </div>
                 </div>
-                <div>
-                    <h1 class="fw-bold mb-1">Yatırım Takip</h1>
-                    <p class="text-muted mb-0">Hisse senedi ve kripto varlıklarınızı Gemini ile analiz edin.</p>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary-glass px-4" @onclick="OpenAddModal">
+                        <i class="bi bi-plus-lg me-2"></i> Yeni Hisse Ekle
+                    </button>
+                    <button class="btn btn-outline-secondary border-white border-opacity-10 text-white" @onclick="RefreshQuotes">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Metric Cards Section (Task 4) -->
+            <div class="row g-4 mb-5">
+                <div class="col-md-4">
+                    <div class="metric-card h-100">
+                        <div class="d-flex justify-content-between mb-3">
+                            <span class="text-muted small fw-bold text-uppercase">Toplam Portföy Değeri</span>
+                            <i class="bi bi-wallet2 text-primary"></i>
+                        </div>
+                        <h2 class="fw-bold mb-1">₺@_totalValue.ToString("N2")</h2>
+                        <div class="small">
+                            <span class="text-muted">Yaklaşık</span>
+                            <span class="fw-bold ms-1">$@((_totalValue / 32.5m).ToString("N2"))</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="metric-card h-100">
+                        <div class="d-flex justify-content-between mb-3">
+                            <span class="text-muted small fw-bold text-uppercase">Toplam Kar / Zarar</span>
+                            <i class="bi bi-cash-stack text-success"></i>
+                        </div>
+                        <h2 class="fw-bold mb-1 @(_totalProfitLoss >= 0 ? "text-success-bright" : "text-danger-bright")">
+                            @(_totalProfitLoss >= 0 ? "+" : "")₺@_totalProfitLoss.ToString("N2")
+                        </h2>
+                        <div class="small">
+                            <span class="badge @(_totalProfitLoss >= 0 ? "bg-success" : "bg-danger") bg-opacity-25 @(_totalProfitLoss >= 0 ? "text-success" : "text-danger")">
+                                %@_totalProfitLossPercentage.ToString("N2")
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="metric-card h-100">
+                        <div class="d-flex justify-content-between mb-3">
+                            <span class="text-muted small fw-bold text-uppercase">Bakiye Durumu (TL/USD)</span>
+                            <i class="bi bi-currency-exchange text-warning"></i>
+                        </div>
+                        <div class="d-flex align-items-end gap-3">
+                            <div>
+                                <h4 class="fw-bold mb-0">₺45,250</h4>
+                                <small class="text-muted">Yatırıma Hazır</small>
+                            </div>
+                            <div class="border-start border-white border-opacity-10 ps-3">
+                                <h4 class="fw-bold mb-0">$1,400</h4>
+                                <small class="text-muted">Döviz Varlık</small>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <div class="row g-4">
-                <!-- Portfolio Table -->
-                <div class="col-lg-7">
+                <!-- Portfolio Table (Task 4) -->
+                <div class="col-lg-8">
                     <div class="glass-card mb-4 h-100">
                         <div class="d-flex justify-content-between align-items-center mb-4">
-                            <h5 class="fw-bold mb-0">Varlıklarım</h5>
-                            <button class="btn btn-sm btn-primary-glass" @onclick="RefreshQuotes">
-                                <i class="bi bi-arrow-clockwise me-1"></i> Verileri Güncelle
-                            </button>
+                            <h5 class="fw-bold mb-0">Portföy Varlıkları</h5>
+                             <span class="badge-finance">@_stocks.Count Hisse</span>
                         </div>
 
                         <div class="table-responsive">
@@ -34,82 +94,72 @@
                                 <thead>
                                     <tr>
                                         <th>Sembol</th>
-                                        <th>Güncel Fiyat</th>
-                                        <th>Değişim (%)</th>
-                                        <th>Durum</th>
+                                        <th>Lot</th>
+                                        <th>Maliyet</th>
+                                        <th>Güncel</th>
+                                        <th>Toplam Değer</th>
+                                        <th>Kar/Zarar (%)</th>
+                                        <th>Detay</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach (var stock in _stocks)
                                     {
                                         <tr>
-                                            <td class="fw-bold">@stock.Symbol</td>
-                                            <td class="fs-5 fw-bold">@stock.Price.ToString("N2")</td>
-                                            <td class="@(stock.Change >= 0 ? "text-success" : "text-danger")">
-                                                <i class="bi @(stock.Change >= 0 ? "bi-caret-up-fill" : "bi-caret-down-fill")"></i>
-                                                @stock.Change.ToString("N2")%
+                                            <td class="fw-bold text-gradient">@stock.Symbol</td>
+                                            <td>@stock.Quantity.ToString("N0")</td>
+                                            <td class="text-muted">₺@stock.AverageCost.ToString("N2")</td>
+                                            <td class="fw-bold">₺@stock.Price.ToString("N2")</td>
+                                            <td>₺@stock.TotalValue.ToString("N2")</td>
+                                            <td class="@(stock.ProfitLoss >= 0 ? "text-success-bright" : "text-danger-bright") fw-bold">
+                                                <div>@(stock.ProfitLoss >= 0 ? "+" : "")@stock.ProfitLoss.ToString("N2")</div>
+                                                <small class="opacity-75">(@stock.ProfitLossPercentage.ToString("N2")%)</small>
                                             </td>
                                             <td>
-                                                <span class="badge-finance">Aktif</span>
+                                                <button class="btn btn-sm btn-link text-primary p-0" @onclick="() => ShowDetails(stock.Symbol)">
+                                                    <i class="bi bi-info-circle"></i>
+                                                </button>
                                             </td>
                                         </tr>
                                     }
                                 </tbody>
                             </table>
                         </div>
-
-                        <div class="mt-4 p-3 rounded-3 bg-white bg-opacity-5 border border-white border-opacity-10">
-                            <p class="text-muted small mb-2"><i class="bi bi-info-circle me-1"></i> Sadece Borsa İstanbul (BIST) hisselerini takip edebilirsiniz.</p>
-                            <div class="row g-2">
-                                <div class="col-md-9">
-                                    <input type="text" class="form-control bg-transparent border-white border-opacity-10 text-white" 
-                                           @bind="_newSymbol" placeholder="Hisse Kodu (Örn: THYAO.IS)" />
-                                </div>
-                                <div class="col-md-3">
-                                    <button class="btn btn-primary-glass w-100" @onclick="AddSymbol">
-                                        <i class="bi bi-plus-lg"></i> Ekle
-                                    </button>
-                                </div>
-                            </div>
-                            @if (!string.IsNullOrEmpty(_symbolError))
-                            {
-                                <div class="text-danger small mt-2 animate-fade-in">
-                                    <i class="bi bi-exclamation-circle me-1"></i> @_symbolError
-                                </div>
-                            }
-                        </div>
                     </div>
                 </div>
 
                 <!-- AI Analysis -->
-                <div class="col-lg-5">
-                    <div class="glass-card mb-4 h-100 d-flex flex-column">
+                <div class="col-lg-4">
+                    <div class="glass-card mb-4 d-flex flex-column">
                         <h5 class="fw-bold mb-4 d-flex align-items-center">
-                            <i class="bi bi-stars text-primary me-2"></i> Gemini Portföy Analizi
+                            <i class="bi bi-stars text-primary me-2"></i> Gemini Analizi
                         </h5>
 
                         @if (_isAnalyzing)
                         {
-                            <div class="spinner-container flex-grow-1 d-flex flex-column justify-content-center">
+                            <div class="spinner-container py-5">
                                 <div class="custom-spinner"></div>
-                                <p class="text-muted mt-3">Yapay zeka verileri yorumluyor...</p>
+                                <p class="text-muted mt-3">Strateji oluşturuluyor...</p>
                             </div>
                         }
                         else if (!string.IsNullOrEmpty(_aiAnalysis))
                         {
-                            <div class="flex-grow-1 animate-fade-in overflow-auto pe-2" style="max-height: 400px;">
-                                <div class="p-3 rounded-4 bg-white bg-opacity-5 border border-white border-opacity-10 mb-3">
+                            <div class="animate-fade-in overflow-auto pe-2" style="max-height: 500px;">
+                                <div class="p-3 rounded-4 bg-white bg-opacity-5 border border-white border-opacity-10 mb-3 small lh-lg">
                                     @((MarkupString)_aiAnalysis.Replace("\n", "<br>"))
                                 </div>
-                                <p class="small text-muted"><i class="bi bi-info-circle me-1"></i> Bu analiz yapay zeka tarafından üretilmiştir ve yatırım tavsiyesi değildir.</p>
+                                <button class="btn btn-sm btn-outline-primary w-100 mb-3" @onclick="AnalyzePortfolio">
+                                    Yeniden Analiz Et
+                                </button>
+                                <p class="x-small text-muted fst-italic"><i class="bi bi-info-circle me-1"></i> Finansal tavsiye değildir.</p>
                             </div>
                         }
                         else
                         {
-                            <div class="text-center py-5 flex-grow-1 d-flex flex-column justify-content-center">
+                            <div class="text-center py-4">
                                 <i class="bi bi-robot text-muted fs-1 mb-3 opacity-25"></i>
-                                <p class="text-muted mb-4 px-4">Portföyünüzün gidişatı hakkında samimi ve anlaşılır bir analiz almak için butona tıklayın.</p>
-                                <button class="btn btn-primary-glass mx-auto" @onclick="AnalyzePortfolio">
+                                <p class="text-muted mb-4 small">Portföyünüzü optimize etmek için Gemini'den görüş alın.</p>
+                                <button class="btn btn-primary-glass w-100" @onclick="AnalyzePortfolio">
                                     Analiz Üret
                                 </button>
                             </div>
@@ -121,47 +171,235 @@
     </div>
 </div>
 
+<!-- Add Stock Modal (Task 2 & Task 1) -->
+@if (_showAddModal)
+{
+    <div class="modal fade show d-block animate-fade-in" style="background: rgba(0,0,0,0.7); backdrop-filter: blur(5px);" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content glass-modal">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-plus-circle me-2 text-primary"></i>Yeni Hisse Ekle</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseAddModal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-4">
+                        <p class="text-muted small mb-2"><i class="bi bi-info-circle me-1"></i> Sadece Borsa İstanbul (BIST) hisselerini takip edebilirsiniz.</p>
+                        <div class="mb-3">
+                            <label class="form-label small text-muted">Hisse Kodu (Sembol veya İsim)</label>
+                            <input type="text" list="bistSymbols" class="form-control glass-input" 
+                                   @bind="_newSymbol" placeholder="Örn: THYAO" @bind:event="oninput" />
+                            <datalist id="bistSymbols">
+                                @foreach (var stock in BistDataService.AllStocks)
+                                {
+                                    <option value="@stock.Symbol">@stock.Name</option>
+                                }
+                            </datalist>
+                            <small class="text-primary mt-1 d-block">Önizleme: @FormatPreview(_newSymbol)</small>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label class="form-label small text-muted">Lot Miktarı</label>
+                                <input type="number" class="form-control glass-input" @bind="_newQuantity" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small text-muted">Ort. Maliyet (₺)</label>
+                                <input type="number" class="form-control glass-input" @bind="_newCost" />
+                            </div>
+                        </div>
+                    </div>
+                    @if (!string.IsNullOrEmpty(_symbolError))
+                    {
+                        <div class="alert bg-danger bg-opacity-10 text-danger border-0 small py-2 animate-fade-in">
+                            <i class="bi bi-exclamation-circle me-1"></i> @_symbolError
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link text-white text-decoration-none" @onclick="CloseAddModal">Vazgeç</button>
+                    <button type="button" class="btn btn-primary-glass px-4" @onclick="AddSymbol">Portföye Ekle</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Detail Modal (Task 4) -->
+@if (_selectedDetail != null)
+{
+    <div class="modal fade show d-block animate-fade-in" style="background: rgba(0,0,0,0.7); backdrop-filter: blur(5px);" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content glass-modal">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">@_selectedDetail.Symbol Hisse Analiz Detayı</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="() => _selectedDetail = null"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <h6 class="text-muted small text-uppercase fw-bold mb-3 border-bottom border-white border-opacity-10 pb-2">Hareketli Ortalamalar</h6>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>50 Günlük Ort. (MA50)</span>
+                                <span class="fw-bold text-primary">₺@_selectedDetail.FiftyDayAverage.ToString("N2")</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>200 Günlük Ort. (MA200)</span>
+                                <span class="fw-bold text-warning">₺@_selectedDetail.TwoHundredDayAverage.ToString("N2")</span>
+                            </div>
+
+                            <h6 class="text-muted small text-uppercase fw-bold mt-4 mb-3 border-bottom border-white border-opacity-10 pb-2">Temettü Verimi & DRIP</h6>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Kazanılan Lotlar (DRIP)</span>
+                                <span class="fw-bold text-success-bright">@_selectedDetail.DripLots.ToString("N2") Lot</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted small text-uppercase fw-bold mb-3 border-bottom border-white border-opacity-10 pb-2">Temettü Geçmişi</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-glass fs-x-small">
+                                    <thead>
+                                        <tr>
+                                            <th>Tarih</th>
+                                            <th>Tutar</th>
+                                            <th>Verim</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach(var div in _selectedDetail.Dividends)
+                                        {
+                                            <tr>
+                                                <td>@div.Date.ToShortDateString()</td>
+                                                <td>₺@div.Amount.ToString("N2")</td>
+                                                <td class="text-success">%@div.Yield.ToString("N1")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary-glass" @onclick="() => _selectedDetail = null">Kapat</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private List<StockData> _stocks = new();
-    private List<string> _symbols = new() { "THYAO.IS", "EREGL.IS", "SASA.IS", "TUPRS.IS" };
+    private List<(string Symbol, decimal Qty, decimal Cost)> _portfolioData = new() 
+    { 
+        ("THYAO.IS", 150, 245.50m), 
+        ("TUPRS.IS", 80, 158.20m), 
+        ("EREGL.IS", 500, 38.40m) 
+    };
+    
     private string _newSymbol = "";
+    private decimal _newQuantity = 0;
+    private decimal _newCost = 0;
+    
     private string? _symbolError;
     private bool _isAnalyzing = false;
     private string? _aiAnalysis;
+    
+    private bool _showAddModal = false;
+    private StockDetail? _selectedDetail;
+
+    private decimal _totalValue => _stocks.Sum(s => s.TotalValue);
+    private decimal _totalCost => _stocks.Sum(s => s.Quantity * s.AverageCost);
+    private decimal _totalProfitLoss => _totalValue - _totalCost;
+    private decimal _totalProfitLossPercentage => _totalCost != 0 ? (_totalProfitLoss / _totalCost) * 100 : 0;
 
     protected override async Task OnInitializedAsync()
     {
-        await RefreshQuotes();
+        await LoadInitialData();
+    }
+
+    private async Task LoadInitialData()
+    {
+        var rawStocks = await InvestmentService.GetStockQuotesAsync(_portfolioData.Select(p => p.Symbol).ToList());
+        foreach(var stock in rawStocks)
+        {
+            var pData = _portfolioData.First(p => p.Symbol == stock.Symbol);
+            stock.Quantity = pData.Qty;
+            stock.AverageCost = pData.Cost;
+        }
+        _stocks = rawStocks;
     }
 
     private async Task RefreshQuotes()
     {
-        _stocks = await InvestmentService.GetStockQuotesAsync(_symbols);
+        var symbols = _stocks.Select(s => s.Symbol).ToList();
+        var refreshed = await InvestmentService.GetStockQuotesAsync(symbols);
+        foreach(var r in refreshed)
+        {
+            var existing = _stocks.FirstOrDefault(s => s.Symbol == r.Symbol);
+            if(existing != null)
+            {
+                existing.Price = r.Price;
+                existing.Change = r.Change;
+            }
+        }
+        StateHasChanged();
     }
+
+    private string FormatPreview(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input)) return "";
+        var upper = input.Trim().ToUpper();
+        return upper.EndsWith(".IS") ? upper : $"{upper}.IS";
+    }
+
+    private void OpenAddModal()
+    {
+        _newSymbol = "";
+        _newQuantity = 0;
+        _newCost = 0;
+        _symbolError = null;
+        _showAddModal = true;
+    }
+
+    private void CloseAddModal() => _showAddModal = false;
 
     private async Task AddSymbol()
     {
         _symbolError = null;
-        if (string.IsNullOrWhiteSpace(_newSymbol)) return;
+        if (string.IsNullOrWhiteSpace(_newSymbol)) 
+        {
+            _symbolError = "Lütfen bir sembol girin.";
+            return;
+        }
 
-        var upper = _newSymbol.ToUpper();
+        var formatted = FormatPreview(_newSymbol);
         
-        if (!InvestmentService.IsValidBistSymbol(upper))
+        if (!InvestmentService.IsValidBistSymbol(formatted))
         {
-            _symbolError = "Lütfen geçerli bir BIST sembolü girin (Örn: THYAO.IS).";
+            _symbolError = "Lütfen geçerli bir BIST sembolü girin.";
             return;
         }
 
-        if (_symbols.Contains(upper))
+        if (_stocks.Any(s => s.Symbol == formatted))
         {
-            _symbolError = "Bu sembol zaten ekli.";
+            _symbolError = "Bu hisse zaten portföyünüzde.";
             return;
         }
 
-        _symbols.Add(upper);
-        _newSymbol = "";
-        await RefreshQuotes();
+        if (_newQuantity <= 0 || _newCost <= 0)
+        {
+            _symbolError = "Lütfen geçerli lot ve maliyet girin.";
+            return;
+        }
+
+        _portfolioData.Add((formatted, _newQuantity, _newCost));
+        await LoadInitialData();
+        _showAddModal = false;
         StateHasChanged();
+    }
+
+    private async Task ShowDetails(string symbol)
+    {
+        _selectedDetail = await InvestmentService.GetStockDetailAsync(symbol);
     }
 
     private async Task AnalyzePortfolio()
@@ -184,3 +422,14 @@
         }
     }
 }
+
+<style>
+    .fs-x-small { font-size: 0.7rem !important; }
+    .x-small { font-size: 0.75rem !important; }
+    .text-gradient {
+        background: linear-gradient(to right, #00d1ff, #00ff85);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+</style>

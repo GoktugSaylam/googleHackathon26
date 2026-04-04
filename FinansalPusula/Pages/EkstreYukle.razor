@@ -69,9 +69,24 @@
                 </div>
             }
 
-            @if (_report != null)
+            @if (BudgetService.AllReports.Any())
             {
                 <div class="animate-fade-in">
+                    <!-- Dashboard Filters -->
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4 class="fw-bold mb-0">Harcama Arşivi</h4>
+                        <div class="d-flex align-items-center gap-3">
+                            <label class="small text-muted mb-0">Dönem Seçin:</label>
+                            <select class="form-select glass-input py-1 px-4 border-opacity-20 shadow-sm" @onchange="OnPeriodChanged" style="width: auto; min-width: 150px;">
+                                <option value="Hepsi">Tüm Harcamalar</option>
+                                @foreach (var p in BudgetService.AllReports.Select(r => r.Period).Distinct().OrderByDescending(p => p))
+                                {
+                                    <option value="@p">@p Dönemi</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+
                     <!-- Summary Card -->
                     <div class="glass-card mb-4 overflow-hidden position-relative">
                         <div class="position-absolute top-0 end-0 p-4 opacity-10">
@@ -80,18 +95,18 @@
                         
                         <div class="row">
                             <div class="col-md-8">
-                                <span class="badge bg-primary bg-opacity-25 text-primary mb-3 px-3 py-2 rounded-3">Yapay Zeka Özeti</span>
+                                <span class="badge bg-primary bg-opacity-25 text-primary mb-3 px-3 py-2 rounded-3">Yapay Zeka Özeti (@(_selectedPeriod == "Hepsi" ? "Genel" : _selectedPeriod))</span>
                                 <h3 class="fw-bold mb-3">Finansal Danışman Notu</h3>
-                                <p class="lead text-main opacity-75">@_report.SummaryAdvice</p>
+                                <p class="lead text-main opacity-75">@GetActiveSummary()</p>
                             </div>
                             <div class="col-md-4 text-md-end mt-4 mt-md-0 d-flex flex-column justify-content-center">
                                 <small class="text-muted text-uppercase fw-bold letter-spacing-1">Toplam Harcama</small>
-                                <h1 class="fw-bold text-gradient mb-0">@_report.TotalSpending.ToString("C2")</h1>
+                                <h1 class="fw-bold text-gradient mb-0">@GetTotalSpending().ToString("C2")</h1>
                             </div>
                         </div>
                     </div>
 
-                    @if (_report.Subscriptions?.Any() == true)
+                    @if (GetActiveSubscriptions().Any())
                     {
                         <div class="glass-card mb-4 border-warning border-opacity-20">
                             <h5 class="fw-bold mb-4 d-flex align-items-center">
@@ -108,7 +123,7 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @foreach (var sub in _report.Subscriptions)
+                                        @foreach (var sub in GetActiveSubscriptions())
                                         {
                                             <tr>
                                                 <td class="fw-bold">@sub.Name</td>
@@ -123,6 +138,7 @@
                         </div>
                     }
 
+                    <!-- Expense Details -->
                     <div class="glass-card mb-5">
                         <h5 class="fw-bold mb-4 d-flex align-items-center">
                             <i class="bi bi-list-check text-primary me-2"></i> Harcama Detayları
@@ -132,23 +148,22 @@
                                 <thead>
                                     <tr>
                                         <th>Tarih</th>
+                                        <th>Dönem</th>
                                         <th>Mağaza/Firma</th>
                                         <th>Kategori</th>
                                         <th class="text-end">Tutar</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @if (_report.Expenses != null)
+                                    @foreach (var item in GetFilteredExpenses())
                                     {
-                                        @foreach (var item in _report.Expenses)
-                                        {
-                                            <tr>
-                                                <td class="text-muted">@item.Date</td>
-                                                <td class="fw-medium">@item.Merchant</td>
-                                                <td><span class="badge-finance">@item.Category</span></td>
-                                                <td class="text-end fw-bold">@item.Amount.ToString("C2")</td>
-                                            </tr>
-                                        }
+                                        <tr>
+                                            <td class="text-muted small">@item.Date</td>
+                                            <td class="text-muted small">@(item.Donem ?? "-")</td>
+                                            <td class="fw-medium">@item.Merchant</td>
+                                            <td><span class="badge-finance">@item.Category</span></td>
+                                            <td class="text-end fw-bold">@item.Amount.ToString("C2")</td>
+                                        </tr>
                                     }
                                 </tbody>
                             </table>
@@ -164,24 +179,65 @@
     private bool _isProcessing = false;
     private string _statusMessage = "";
     private string? _errorMessage;
-    private ExpenseReport? _report;
+    private string _selectedPeriod = "Hepsi";
+
+    private void OnPeriodChanged(ChangeEventArgs e)
+    {
+        _selectedPeriod = e.Value?.ToString() ?? "Hepsi";
+    }
+
+    private List<ExpenseItem> GetFilteredExpenses()
+    {
+        if (_selectedPeriod == "Hepsi")
+        {
+            return BudgetService.AllReports
+                .SelectMany(r => r.Expenses ?? new List<ExpenseItem>())
+                .ToList();
+        }
+        
+        return BudgetService.AllReports
+            .Where(r => r.Period == _selectedPeriod)
+            .SelectMany(r => r.Expenses ?? new List<ExpenseItem>())
+            .ToList();
+    }
+
+    private List<SubscriptionItem> GetActiveSubscriptions()
+    {
+        if (_selectedPeriod == "Hepsi")
+        {
+            return BudgetService.AllReports
+                .SelectMany(r => r.Subscriptions ?? new List<SubscriptionItem>())
+                .GroupBy(s => s.Name)
+                .Select(g => g.First())
+                .ToList();
+        }
+
+        return BudgetService.AllReports
+            .Where(r => r.Period == _selectedPeriod)
+            .SelectMany(r => r.Subscriptions ?? new List<SubscriptionItem>())
+            .ToList();
+    }
+
+    private decimal GetTotalSpending() => GetFilteredExpenses().Sum(e => e.Amount);
+
+    private string GetActiveSummary()
+    {
+        if (_selectedPeriod == "Hepsi") 
+            return "Tüm dönemlerin ortalama harcama analizi yapılıyor. Genel tasarruf stratejilerini aşağıda bulabilirsiniz.";
+            
+        return BudgetService.AllReports.FirstOrDefault(r => r.Period == _selectedPeriod)?.SummaryAdvice 
+               ?? "Seçili dönem için analiz beyanı bulunamadı.";
+    }
 
     private async Task HandleFileSelected(InputFileChangeEventArgs e)
     {
         _isProcessing = true;
         _errorMessage = null;
-        _report = null;
 
         try
         {
             var file = e.File;
             if (file == null) return;
-
-            if (file.Size > 10 * 1024 * 1024)
-            {
-                _errorMessage = "Dosya boyutu çok büyük (Max 10MB).";
-                return;
-            }
 
             _statusMessage = "Dosya okunuyor...";
             using var stream = file.OpenReadStream(10 * 1024 * 1024);
@@ -199,10 +255,15 @@
             }
 
             _statusMessage = "Yapay zeka analiz ediyor...";
-            _report = await GeminiService.AnalyzeExpensesAsync(ocrText);
-            BudgetService.LastReport = _report;
+            var report = await GeminiService.AnalyzeExpensesAsync(ocrText);
 
-            if (_report == null)
+            if (report != null)
+            {
+                // Task 3: Veri birleştirme mantığı
+                BudgetService.AddOrUpdateReport(report);
+                _selectedPeriod = report.Period ?? "Hepsi";
+            }
+            else
             {
                 _errorMessage = "Analiz sonuçları işlenemedi.";
             }

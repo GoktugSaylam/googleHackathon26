@@ -1024,9 +1024,6 @@ D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\compressed\c89z8d
 D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\compressed\cx824hbyjb-tptq2av103.gz
 D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\compressed\conhmcjb3m-lfu7j35m59.gz
 D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\compressed\so0wmqvf3u-oyz0vx2fzb.gz
-D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\compressed\o45d2xaq4v-j3hcjiqr1v.gz
-D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\compressed\da72g1jh3z-3dzdpt0uir.gz
-D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\compressed\zsskahf6ff-6aoew35907.gz
 D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\staticwebassets.build.json
 D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\staticwebassets.development.json
 D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\staticwebassets.build.endpoints.json
@@ -1041,3 +1038,6 @@ D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\FinansalPusula.dl
 D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\refint\FinansalPusula.dll
 D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\FinansalPusula.pdb
 D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\ref\FinansalPusula.dll
+D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\compressed\o45d2xaq4v-9cjy40pc60.gz
+D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\compressed\da72g1jh3z-eu5hvh5ncm.gz
+D:\Hackhaton\googleHackathon26\FinansalPusula\obj\Debug\net8.0\compressed\zsskahf6ff-ikmm7v13nr.gz

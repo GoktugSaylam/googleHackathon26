@@ -9,6 +9,10 @@
       "PackagePath": "staticwebassets\\FinansalPusula.styles.css"
     },
     {
+      "Id": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\wwwroot\\appsettings.Development.json",
+      "PackagePath": "staticwebassets\\appsettings.Development.json"
+    },
+    {
       "Id": "D:\\Hackhaton\\googleHackathon26\\FinansalPusula\\wwwroot\\appsettings.json",
       "PackagePath": "staticwebassets\\appsettings.json"
     },

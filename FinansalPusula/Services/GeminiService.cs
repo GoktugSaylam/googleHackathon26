@@ -26,6 +26,7 @@ public class GeminiService
 Giderleri ve abonelikleri (Netflix, Spotify vb.) tespit et. Abonelikler için daha ekonomik alternatifler öner (örn: aile paketi, yıllık ödeme).
 JSON yapısı (SADECE JSON döndür, açıklama ekleme):
 {{
+  ""period"": ""AA-YYYY"",
   ""expenses"": [
     {{ ""merchant"": ""Market/Firma Adı"", ""date"": ""GG.AA.YYYY"", ""amount"": 0.0, ""category"": ""Kategori"" }}
   ],
@@ -112,6 +113,9 @@ public class Part
 // Business Models
 public class ExpenseReport
 {
+    [JsonPropertyName("period")]
+    public string? Period { get; set; } // Örn: "04-2026"
+
     [JsonPropertyName("expenses")]
     public List<ExpenseItem>? Expenses { get; set; }
 
@@ -131,6 +135,7 @@ public class ExpenseItem
     public string? Date { get; set; }
     public decimal Amount { get; set; }
     public string? Category { get; set; }
+    public string? Donem { get; set; } // Örn: "04-2026"
 }
 
 public class SubscriptionItem
@@ -141,9 +146,4 @@ public class SubscriptionItem
     public string? SavingsAdvice { get; set; }
 }
 
-public class StockData
-{
-    public string Symbol { get; set; } = "";
-    public decimal Price { get; set; }
-    public decimal Change { get; set; }
-}
+// StockData artık InvestmentService.cs içinde merkezi olarak tanımlanmıştır.
