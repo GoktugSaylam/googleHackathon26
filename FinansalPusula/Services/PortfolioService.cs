@@ -66,12 +66,13 @@ public class PortfolioService
 
     /// <summary>
     /// Portföy performans metriklerini (CAGR ve XIRR) çeker.
+    /// Opsiyonel olarak sembol verilirse sadece o hisse için hesaplar.
     /// </summary>
-    public async Task<PortfolioMetricsRecord?> GetPortfolioMetricsAsync(decimal currentTotalValue)
+    public async Task<PortfolioMetricsRecord?> GetPortfolioMetricsAsync(decimal currentValue, string? symbol = null)
     {
         try
         {
-            var response = await _httpClient.PostAsJsonAsync("/api/portfolio/metrics", new { CurrentValue = currentTotalValue });
+            var response = await _httpClient.PostAsJsonAsync("/api/portfolio/metrics", new { CurrentValue = currentValue, Symbol = symbol });
             return await response.Content.ReadFromJsonAsync<PortfolioMetricsRecord>();
         }
         catch (Exception ex)

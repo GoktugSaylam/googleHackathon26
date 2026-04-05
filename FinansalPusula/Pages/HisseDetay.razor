@@ -76,6 +76,12 @@
                         </h4>
                     </div>
                 </div>
+                <div class="col-6 col-md-3">
+                    <div class="metric-card h-100 border-success border-opacity-25">
+                        <div class="text-muted small fw-bold mb-2">HİSSE CAGR (%)</div>
+                        <h4 class="fw-bold mb-0 text-success-bright">%@(_cagr.ToString("N2"))</h4>
+                    </div>
+                </div>
             </div>
 
             <div class="row g-4">
@@ -229,6 +235,7 @@
     private List<PortfolioTransaction> _hisseTxs = new();
     private decimal _lastDividendPerShare = 0;
     private decimal _expectedNextDividend = 0;
+    private double _cagr = 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -482,6 +489,13 @@
                 {
                     _yieldOnCost = (lastDiv.Amount / _metrics.OrtalamMaliyetLot) * 100;
                 }
+            }
+
+            // CAGR Çek (Backend'den sembol bazlı)
+            var perfMetrics = await PortfolioService.GetPortfolioMetricsAsync(_metrics.GuncelDeger, actualSymbol);
+            if (perfMetrics != null)
+            {
+                _cagr = perfMetrics.Cagr;
             }
         }
         catch (Exception ex)

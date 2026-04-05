@@ -1,16 +1,12 @@
-<<<<<<< HEAD
 using System.Security.Claims;
 using FinansalPusula.Server.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.HttpOverrides;
-=======
 using Microsoft.AspNetCore.ResponseCompression;
 using FinansalPusula.Server.Data;
-using FinansalPusula.Server.Services;
 using FinansalPusula.Services;
->>>>>>> 63ca2651a1b900fcc4e12909ce1f025e790bbaac
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,7 +15,6 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 builder.Services.AddHttpClient();
 
-<<<<<<< HEAD
 var googleClientId = builder.Configuration["Authentication:Google:ClientId"];
 var googleClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
 var googleCallbackPath = builder.Configuration["Authentication:Google:CallbackPath"];
@@ -109,11 +104,11 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownNetworks.Clear();
     options.KnownProxies.Clear();
 });
-=======
+
 // SQLite Repository
 builder.Services.AddSingleton<TransactionRepository>();
+builder.Services.AddSingleton<ExpenseRepository>();
 builder.Services.AddSingleton<FinancialMetricsService>();
->>>>>>> 63ca2651a1b900fcc4e12909ce1f025e790bbaac
 
 var app = builder.Build();
 
@@ -134,6 +129,19 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
+// ─── Budget API ───────────────────────────────────────────────────────────────
+
+app.MapGet("/api/budget/reports", async (ExpenseRepository repo) =>
+{
+    return Results.Ok(await repo.GetAllAsync());
+});
+
+app.MapPost("/api/budget/reports", async (ExpenseReport report, ExpenseRepository repo) =>
+{
+    await repo.AddOrUpdateAsync(report);
+    return Results.Ok();
+});
+
 // ─── Portfolio API ────────────────────────────────────────────────────────────
 
 app.MapGet("/api/portfolio", async (TransactionRepository repo) =>
@@ -141,7 +149,6 @@ app.MapGet("/api/portfolio", async (TransactionRepository repo) =>
     return Results.Ok(await repo.GetAllAsync());
 });
 
-<<<<<<< HEAD
 app.MapPost("/api/ai/analyze-expenses", async (
     AnalyzeExpensesRequest request,
     StatementAnalysisService analysisService,
@@ -188,10 +195,7 @@ app.MapPost("/api/ai/analyze-expenses", async (
     }
 }).RequireAuthorization();
 
-app.MapGet("/api/stock/price/{symbol}", async (string symbol, string? date) =>
-=======
 app.MapPost("/api/portfolio", async (PortfolioTransaction tx, TransactionRepository repo) =>
->>>>>>> 63ca2651a1b900fcc4e12909ce1f025e790bbaac
 {
     await repo.AddAsync(tx);
     return Results.Ok();
@@ -207,7 +211,15 @@ app.MapPost("/api/portfolio/metrics", async (MetricsRequest request, Transaction
 {
     var currentValue = request.CurrentValue;
     var txs = await repo.GetAllAsync();
+    
+    // Eğer sembol parametresi geldiyse sadece o hisseyi filtrele
+    if (!string.IsNullOrEmpty(request.Symbol))
+    {
+        txs = txs.Where(t => t.Sembol?.Trim().ToUpper() == request.Symbol.Trim().ToUpper()).ToList();
+    }
+
     if (!txs.Any()) return Results.Ok(new { Cagr = 0.0, Xirr = 0.0 });
+
 
     var flows = new List<(DateTime Date, double Amount)>();
     
@@ -234,13 +246,18 @@ app.MapPost("/api/portfolio/metrics", async (MetricsRequest request, Transaction
 
     // CAGR Hesapla
     double totalInvested = Math.Abs(flows.Where(f => f.Amount < 0).Sum(f => f.Amount));
+    double totalWithdrawn = flows.Where(f => f.Amount > 0 && f.Date != DateTime.Now.Date).Sum(f => f.Amount);
+    
     double cagr = 0;
     if (totalInvested > 0)
     {
         var firstTransactionDate = flows.Min(f => f.Date);
         // Kısa Süre Koruması: Astronomik sonuçları engellemek için yılı min 1'e sabitle
         double years = Math.Max((DateTime.Now - firstTransactionDate).TotalDays / 365.25, 1.0);
-        cagr = metricsService.CalculateCagr(totalInvested, (double)currentValue, years);
+        
+        // Gerçekçi CAGR için: Güncel Değer + Çekilen Nakitler
+        double totalEndValue = (double)currentValue + totalWithdrawn;
+        cagr = metricsService.CalculateCagr(totalInvested, totalEndValue, years);
     }
 
     if (double.IsNaN(cagr) || double.IsInfinity(cagr)) cagr = 0;
@@ -257,8 +274,12 @@ app.MapGet("/api/stock/price/{symbol}", async (string symbol, string? date, IHtt
 
     try
     {
-        var cleanSymbol = symbol.Split('.')[0].ToUpper();
-        var formattedSymbol = cleanSymbol + ".IS";
+        var formattedSymbol = symbol.Trim().ToUpper();
+        // Kur sembollerini (= içerenleri) veya zaten uzantısı olanları .IS ile bozma
+        if (!formattedSymbol.Contains("=") && !formattedSymbol.Contains("."))
+        {
+            formattedSymbol += ".IS";
+        }
 
         string yahooUrl;
         DateTime? targetDate = null;
@@ -430,7 +451,7 @@ app.MapGet("/api/stock/range/{symbol}", async (string symbol, string from, strin
                             var ts = timestamps[i]!.GetValue<long>();
                             var price = closes[i]!.GetValue<decimal>();
                             
-                            // Bu veri noktasından SONRA gerçekleşen tüm bölünmeleri bul ve fiyatı geri çarparak "un-adjust" et
+                            // Bu veri noktasından SONRA gerçekleşen tüm bölünmeleri find ve fiyatı geri çarparak "un-adjust" et
                             decimal cumulativeFactor = 1.0m;
                             foreach (var s in allSplits)
                             {
@@ -544,7 +565,6 @@ app.MapFallbackToFile("index.html");
 
 app.Run();
 
-<<<<<<< HEAD
 static string NormalizeReturnUrl(string? returnUrl)
 {
     if (string.IsNullOrWhiteSpace(returnUrl))
@@ -574,6 +594,4 @@ static string NormalizeReturnUrl(string? returnUrl)
 internal sealed record AnalyzeExpensesRequest(string FileBytesBase64, string? FileName);
 internal sealed record AuthClaim(string Type, string Value);
 internal sealed record AuthUserResponse(bool IsAuthenticated, AuthClaim[] Claims);
-=======
-public record MetricsRequest(decimal CurrentValue);
->>>>>>> 63ca2651a1b900fcc4e12909ce1f025e790bbaac
+public record MetricsRequest(decimal CurrentValue, string? Symbol = null);

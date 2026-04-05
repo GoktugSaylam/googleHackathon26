@@ -3,8 +3,10 @@
 @using Microsoft.JSInterop
 @inject YahooFinanceService YahooService
 @inject PortfolioService PortfolioService
+@inject BudgetService BudgetService
 @inject NavigationManager NavManager
 @inject IJSRuntime _jsRuntime
+@implements IDisposable
 
 <PageTitle>Dashboard - HisseMetre</PageTitle>
 
@@ -18,14 +20,20 @@
                     <div class="metric-card h-100">
                         <div class="text-muted small fw-bold mb-2">PORTFÖY DEĞERİ (TL)</div>
                         <h2 class="fw-bold mb-0 text-white">₺@_totalValueTL.ToString("N0")</h2>
-                        <span class="text-success-bright x-small fw-bold">+%7,2 ▲</span>
+                        <span class="@_getMetricColor(_totalProfitLossPercentageTL) x-small fw-bold">
+                            @(_totalProfitLossPercentageTL >= 0 ? "+" : "")%@_totalProfitLossPercentageTL.ToString("N1")
+                            @(_totalProfitLossPercentageTL >= 0 ? "▲" : "▼")
+                        </span>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="metric-card h-100">
                         <div class="text-muted small fw-bold mb-2">PORTFÖY DEĞERİ (USD)</div>
                         <h2 class="fw-bold mb-0 text-white">$@_totalValueUSD.ToString("N0")</h2>
-                        <span class="text-success-bright x-small fw-bold">+%4,1 ▲</span>
+                        <span class="@_getMetricColor(_totalProfitLossPercentageTL) x-small fw-bold">
+                            @(_totalProfitLossPercentageTL >= 0 ? "+" : "")%@_totalProfitLossPercentageTL.ToString("N1")
+                            @(_totalProfitLossPercentageTL >= 0 ? "▲" : "▼")
+                        </span>
                     </div>
                 </div>
                 <div class="col-md-3">
@@ -41,9 +49,18 @@
                         <div class="text-muted small fw-bold mb-2">XIRR (GERÇEK GETİRİ)</div>
                         <h2 class="fw-bold mb-1 @_getMetricColor(_xirr)">%@_xirr.ToString("N2")</h2>
                         <div class="mt-1">
-                            <span class="badge bg-success bg-opacity-20 text-success-bright border border-success border-opacity-25" style="font-size: 0.65rem;">
-                                <i class="bi bi-trophy-fill me-1"></i> BIST100'ü yendi (Enflasyonun %12 üzerinde)
-                            </span>
+                            @if (_cagr > 60)
+                            {
+                                <span class="badge bg-success bg-opacity-20 text-success-bright border border-success border-opacity-25" style="font-size: 0.65rem;">
+                                    <i class="bi bi-trophy-fill me-1"></i> BIST100 ve Enflasyon üzeri getiri
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning bg-opacity-20 text-warning border border-warning border-opacity-25" style="font-size: 0.65rem;">
+                                    <i class="bi bi-info-circle me-1"></i> Portföy Performans Verisi
+                                </span>
+                            }
                         </div>
                         <i class="bi bi-percent position-absolute end-0 bottom-0 opacity-10 fs-1 me-2 mb-1"></i>
                     </div>
@@ -55,14 +72,14 @@
                 <div class="col-md-3">
                     <div class="metric-card h-100">
                         <div class="text-muted small fw-bold mb-2">TL BAKİYE</div>
-                        <h2 class="fw-bold mb-0 text-white">₺42.500,00</h2>
+                        <h2 class="fw-bold mb-0 text-white">₺@BudgetService.CurrentIdleCash.ToString("N0")</h2>
                         <i class="bi bi-wallet2 position-absolute end-0 bottom-0 opacity-10 fs-1 me-3 mb-2"></i>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="metric-card h-100">
                         <div class="text-muted small fw-bold mb-2">USD BAKİYE</div>
-                        <h2 class="fw-bold mb-0 text-white">$1.240,00</h2>
+                        <h2 class="fw-bold mb-0 text-white">$@((BudgetService.CurrentIdleCash / (_usdTryRate > 0 ? _usdTryRate : 1)).ToString("N0"))</h2>
                         <i class="bi bi-currency-dollar position-absolute end-0 bottom-0 opacity-10 fs-1 me-3 mb-2"></i>
                     </div>
                 </div>
@@ -174,13 +191,32 @@
     private List<StockData> _portfolioQuotes = new();
     private decimal _totalValueTL = 0;
     private decimal _totalValueUSD = 0;
+    private decimal _totalCostTL = 0;
+    private double _totalProfitLossPercentageTL = 0;
+    private decimal _usdTryRate = 33.0m; // Default fallback
     private double _cagr = 0;
     private double _xirr = 0;
+    private CancellationTokenSource _cts = new();
 
     protected override async Task OnInitializedAsync()
     {
-        _transactions = await PortfolioService.GetTransactionsAsync();
-        await CalculatePortfolio();
+        try 
+        {
+            await BudgetService.LoadReportsAsync();
+            _transactions = await PortfolioService.GetTransactionsAsync();
+            await CalculatePortfolio();
+        }
+        catch (OperationCanceledException) { /* Navigation occurred */ }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[YatirimTakip] Init error: {ex.Message}");
+        }
+    }
+
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _cts.Dispose();
     }
 
     private async Task CalculatePortfolio()
@@ -190,37 +226,47 @@
             .GroupBy(t => t.Sembol);
 
         _portfolioQuotes.Clear();
-        foreach (var group in groups)
-        {
+        
+        // Paralel fiyat çekme için task listesi oluştur
+        var tasks = groups.Select(async group => {
             var symbol = group.Key;
-            var netQuantity = group.Sum(t => t.IslemTipi == TransactionType.Alis ? t.Adet : -t.Adet);
+            var netQuantity = group.Sum(t => t.IslemTipi == TransactionType.Alis || t.IslemTipi == TransactionType.Buy ? t.Adet : -t.Adet);
             
-            if (netQuantity <= 0) continue;
+            if (netQuantity <= 0) return null;
 
-            var totalCost = group.Where(t => t.IslemTipi == TransactionType.Alis).Sum(t => t.ToplamTutar);
-            var buyQuantity = group.Where(t => t.IslemTipi == TransactionType.Alis).Sum(t => t.Adet);
+            var totalCost = group.Where(t => t.IslemTipi == TransactionType.Alis || t.IslemTipi == TransactionType.Buy).Sum(t => t.ToplamTutar);
+            var buyQuantity = group.Where(t => t.IslemTipi == TransactionType.Alis || t.IslemTipi == TransactionType.Buy).Sum(t => t.Adet);
             var avgCost = buyQuantity > 0 ? totalCost / buyQuantity : 0;
 
-            // Fiyat bilgisini çek
-            var price = await YahooService.GetLivePriceAsync(symbol);
+            // Fiyat bilgisini çek (Token ile iptal edilebilir)
+            var price = await YahooService.GetLivePriceAsync(symbol, _cts.Token);
             
-            _portfolioQuotes.Add(new StockData
+            return new StockData
             {
                 Symbol = symbol,
                 Price = price,
                 Quantity = netQuantity,
                 AverageCost = avgCost
-            });
-        }
+            };
+        }).ToList();
+
+        var results = await Task.WhenAll(tasks);
+        _portfolioQuotes = results.Where(r => r != null).Cast<StockData>().ToList();
 
         _totalValueTL = _portfolioQuotes.Sum(s => s.TotalValue);
-        _totalValueUSD = _totalValueTL / 32.5m; // TODO: Canlı kur
+        _totalCostTL = _portfolioQuotes.Sum(s => s.Quantity * s.AverageCost);
+        _totalProfitLossPercentageTL = _totalCostTL > 0 ? (double)((_totalValueTL / _totalCostTL) - 1m) * 100 : 0;
+        
+        // Canlı USD/TRY kurunu çek
+        var liveUsdRate = await YahooService.GetLivePriceAsync("USDTRY=X", _cts.Token);
+        if (liveUsdRate > 0) _usdTryRate = liveUsdRate;
+        
+        _totalValueUSD = _usdTryRate > 0 ? _totalValueTL / _usdTryRate : 0;
 
         // Metrikleri Backend'den Çek
         if (_totalValueTL > 0)
         {
             var metrics = await PortfolioService.GetPortfolioMetricsAsync(_totalValueTL);
-            if (metrics != null)
             {
                 _cagr = metrics.Cagr;
                 _xirr = metrics.Xirr;

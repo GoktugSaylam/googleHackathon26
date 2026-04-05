@@ -8,9 +8,9 @@ namespace FinansalPusula.Services;
 
 public interface IYahooFinanceService
 {
-    Task<decimal> GetLivePriceAsync(string symbol);
-    Task<decimal> GetPriceOnDateAsync(string symbol, DateTime date);
-    Task<(decimal sma50, decimal sma200)> GetSmaAsync(string symbol);
+    Task<decimal> GetLivePriceAsync(string symbol, CancellationToken ct = default);
+    Task<decimal> GetPriceOnDateAsync(string symbol, DateTime date, CancellationToken ct = default);
+    Task<(decimal sma50, decimal sma200)> GetSmaAsync(string symbol, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -24,14 +24,19 @@ public class YahooFinanceService : IYahooFinanceService
     public YahooFinanceService(HttpClient httpClient)
     {
         _httpClient = httpClient;
-        _httpClient.Timeout = TimeSpan.FromSeconds(20);
     }
 
     private static string FormatSymbol(string symbol)
     {
         if (string.IsNullOrWhiteSpace(symbol)) return string.Empty;
         var s = symbol.Trim().ToUpper();
-        return s.EndsWith(".IS") ? s : s + ".IS";
+        
+        // Currency pairs (e.g., USDTRY=X) or symbols with explicit extensions (e.g., AAPL)
+        if (s.Contains("=") || s.Contains(".")) 
+            return s;
+
+        // Default to BIST (.IS)
+        return s + ".IS";
     }
 
     private static long ToUnix(DateTime date) =>
@@ -39,7 +44,7 @@ public class YahooFinanceService : IYahooFinanceService
 
     // ─── Güncel Fiyat ─────────────────────────────────────────────────────────
 
-    public async Task<decimal> GetLivePriceAsync(string symbol)
+    public async Task<decimal> GetLivePriceAsync(string symbol, CancellationToken ct = default)
     {
         try
         {
@@ -47,7 +52,7 @@ public class YahooFinanceService : IYahooFinanceService
             // Direkt backend api endpoint'imize gidiyoruz
             var url = $"/api/stock/price/{Uri.EscapeDataString(sym)}";
             
-            var json = await _httpClient.GetStringAsync(url);
+            var json = await _httpClient.GetStringAsync(url, ct);
             return ParseRegularMarketPrice(json);
         }
         catch (Exception ex)
@@ -59,21 +64,21 @@ public class YahooFinanceService : IYahooFinanceService
 
     // ─── Geçmiş Tarih ─────────────────────────────────────────────────────────
 
-    public async Task<decimal> GetPriceOnDateAsync(string symbol, DateTime date)
+    public async Task<decimal> GetPriceOnDateAsync(string symbol, DateTime date, CancellationToken ct = default)
     {
         try
         {
             var sym = FormatSymbol(symbol);
 
             // Önce sadece hedeflenen tarihi çek
-            var price = await FetchPriceForDate(sym, date);
+            var price = await FetchPriceForDate(sym, date, ct);
             if (price > 0) return price;
 
             // Eğer bulunamadıysa (hafta sonu vb.) son 7 güne doğru geriye sar
             for (int offset = 1; offset <= 7; offset++)
             {
                 var altDate = date.Date.AddDays(-offset);
-                price = await FetchPriceForDate(sym, altDate);
+                price = await FetchPriceForDate(sym, altDate, ct);
                 if (price > 0)
                 {
                     Console.WriteLine($"[YahooFinance] {sym} @ {altDate:dd.MM.yyyy} = {price:N2} TL (geri:{offset})");
@@ -82,7 +87,7 @@ public class YahooFinanceService : IYahooFinanceService
             }
 
             // Gelişmiş fallback: 30 günlük aralığı çekip en yakın olanı bul
-            return await FetchPriceFromRange(sym, date.AddDays(-30), date.AddDays(1));
+            return await FetchPriceFromRange(sym, date.AddDays(-30), date.AddDays(1), ct);
         }
         catch (Exception ex)
         {
@@ -91,26 +96,26 @@ public class YahooFinanceService : IYahooFinanceService
         }
     }
 
-    private async Task<decimal> FetchPriceForDate(string sym, DateTime date)
+    private async Task<decimal> FetchPriceForDate(string sym, DateTime date, CancellationToken ct = default)
     {
         try
         {
             var dateStr = date.Date.ToString("yyyy-MM-dd");
             var url = $"/api/stock/price/{Uri.EscapeDataString(sym)}?date={dateStr}";
-            var json = await _httpClient.GetStringAsync(url);
+            var json = await _httpClient.GetStringAsync(url, ct);
             return ParseClosePrice(json);
         }
         catch { return 0m; }
     }
 
-    private async Task<decimal> FetchPriceFromRange(string sym, DateTime from, DateTime to)
+    private async Task<decimal> FetchPriceFromRange(string sym, DateTime from, DateTime to, CancellationToken ct = default)
     {
         try
         {
             var fromStr = from.Date.ToString("yyyy-MM-dd");
             var toStr   = to.Date.ToString("yyyy-MM-dd");
             var url = $"/api/stock/range/{Uri.EscapeDataString(sym)}?from={fromStr}&to={toStr}";
-            var json = await _httpClient.GetStringAsync(url);
+            var json = await _httpClient.GetStringAsync(url, ct);
             return ParseBestClosePrice(json, to); // En yakın değeri alır
         }
         catch { return 0m; }
@@ -118,7 +123,7 @@ public class YahooFinanceService : IYahooFinanceService
 
     // ─── SMA ──────────────────────────────────────────────────────────────────
 
-    public async Task<(decimal sma50, decimal sma200)> GetSmaAsync(string symbol)
+    public async Task<(decimal sma50, decimal sma200)> GetSmaAsync(string symbol, CancellationToken ct = default)
     {
         try
         {
@@ -127,7 +132,7 @@ public class YahooFinanceService : IYahooFinanceService
             var from = to.AddYears(-1);
             var url = $"/api/stock/range/{Uri.EscapeDataString(sym)}?from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}";
             
-            var json = await _httpClient.GetStringAsync(url);
+            var json = await _httpClient.GetStringAsync(url, ct);
             
             using var doc = JsonDocument.Parse(json);
             var q = doc.RootElement

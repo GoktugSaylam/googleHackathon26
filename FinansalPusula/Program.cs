@@ -2,12 +2,12 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using FinansalPusula;
 using FinansalPusula.Services;
+using Microsoft.AspNetCore.Components.Authorization;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-<<<<<<< HEAD
 builder.Services.AddScoped(sp => new HttpClient
 {
 	BaseAddress = new Uri(builder.HostEnvironment.BaseAddress),
@@ -16,9 +16,6 @@ builder.Services.AddScoped(sp => new HttpClient
 builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<ServerAuthStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<ServerAuthStateProvider>());
-=======
-builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
->>>>>>> 63ca2651a1b900fcc4e12909ce1f025e790bbaac
 
 // Custom Services
 builder.Services.AddScoped<BudgetService>();

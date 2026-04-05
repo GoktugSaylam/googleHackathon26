@@ -180,6 +180,10 @@
     private string _statusMessage = "";
     private string? _errorMessage;
     private string _selectedPeriod = "Hepsi";
+    protected override async Task OnInitializedAsync()
+    {
+        await BudgetService.LoadReportsAsync();
+    }
 
     private void OnPeriodChanged(ChangeEventArgs e)
     {
@@ -401,7 +405,7 @@
                         continue;
                     }
 
-                    BudgetService.AddOrUpdateReport(report);
+                    await BudgetService.AddOrUpdateReport(report);
                     lastPeriod = report.Period;
                     processedCount++;
                 }

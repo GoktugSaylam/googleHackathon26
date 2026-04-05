@@ -3,6 +3,7 @@
 @inject YahooFinanceService YahooService
 @inject PortfolioService PortfolioService
 @inject NavigationManager NavManager
+@implements IDisposable
 
 <PageTitle>İşlemler - HisseMetre</PageTitle>
 
@@ -65,9 +66,9 @@
                                     <td class="text-end">₺@tx.BirimFiyat.ToString("N2")</td>
                                     <td class="text-end fw-bold text-white">₺@tx.ToplamTutar.ToString("N2")</td>
                                     <td class="text-center pe-4">
-                                        <button class="btn btn-sm btn-link text-danger p-0" title="Sil"
+                                        <button class="btn-delete-glass" title="Sil"
                                                 @onclick="() => DeleteTransaction(tx.Id)">
-                                            <i class="bi bi-trash fs-5"></i>
+                                            <i class="bi bi-trash3-fill"></i>
                                         </button>
                                     </td>
                                 </tr>
@@ -211,10 +212,19 @@
     private string? _selectedStockName = null;
     private string? _priceFetchStatus = null;
     private bool _priceFetchOk = false;
+    private CancellationTokenSource _cts = new();
 
     protected override async Task OnInitializedAsync()
     {
-        _transactions = await PortfolioService.GetTransactionsAsync();
+        try {
+            _transactions = await PortfolioService.GetTransactionsAsync();
+        } catch (OperationCanceledException) { /* Navigation occurred */ }
+    }
+
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _cts.Dispose();
     }
 
     private void OpenAddModal()
@@ -308,8 +318,8 @@
             if (!symbol.EndsWith(".IS")) symbol += ".IS";
 
             // Timeout sonrası otomatik iptal olsun
-            var priceTask = YahooService.GetPriceOnDateAsync(symbol, _newTx.Tarih);
-            var completed = await Task.WhenAny(priceTask, Task.Delay(20000));
+            var priceTask = YahooService.GetPriceOnDateAsync(symbol, _newTx.Tarih, _cts.Token);
+            var completed = await Task.WhenAny(priceTask, Task.Delay(20000, _cts.Token));
 
             decimal price = 0m;
             if (completed == priceTask && !priceTask.IsFaulted)
@@ -324,8 +334,8 @@
             else
             {
                 // Tarihsel fiyat yoksa güncel fiyatı dene (20sn timeout)
-                var liveTask  = YahooService.GetLivePriceAsync(symbol);
-                var completed2 = await Task.WhenAny(liveTask, Task.Delay(10000));
+                var liveTask  = YahooService.GetLivePriceAsync(symbol, _cts.Token);
+                var completed2 = await Task.WhenAny(liveTask, Task.Delay(10000, _cts.Token));
                 decimal livePrice = 0m;
                 if (completed2 == liveTask && !liveTask.IsFaulted)
                     livePrice = await liveTask;
@@ -414,3 +424,32 @@
         _ => "bg-secondary"
     };
 }
+
+<style>
+    .btn-delete-glass {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        color: #ef4444;
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+        font-size: 1.1rem;
+    }
+
+    .btn-delete-glass:hover {
+        background: rgba(239, 68, 68, 0.25);
+        border-color: rgba(239, 68, 68, 0.5);
+        color: #ff5f5f;
+        transform: translateY(-2px) scale(1.05);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+    }
+
+    .btn-delete-glass:active {
+        transform: scale(0.95);
+    }
+</style>

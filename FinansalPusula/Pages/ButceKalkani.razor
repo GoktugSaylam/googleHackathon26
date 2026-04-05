@@ -120,5 +120,8 @@
 </div>
 
 @code {
-    // Logic is handled via BudgetService properties
+    protected override async Task OnInitializedAsync()
+    {
+        await BudgetService.LoadReportsAsync();
+    }
 }
