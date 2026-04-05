@@ -129,3 +129,9 @@ public class DetailedDividendEvent
     public decimal LotsBought { get; set; }
     public decimal RemainingCash { get; set; }
 }
+
+public class UserSettings
+{
+    public decimal MonthlySalary { get; set; } = 40000;
+    public decimal AnnualInflationRate { get; set; } = 64.0m;
+}

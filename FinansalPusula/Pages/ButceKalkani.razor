@@ -41,6 +41,29 @@
                             </div>
                         </div>
 
+                        <div class="mt-4">
+                            <button class="btn btn-primary w-100 py-2 rounded-4 fw-bold shadow-sm" 
+                                    @onclick="SaveSettings" disabled="@_isSaving">
+                                @if (_isSaving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                    <span>Kaydediliyor...</span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-cloud-check me-2"></i>
+                                    <span>Ayarları Kaydet</span>
+                                }
+                            </button>
+                            
+                            @if (_showSuccess)
+                            {
+                                <div class="alert alert-success bg-success bg-opacity-10 border-success border-opacity-20 text-success-bright mt-3 mb-0 py-2 rounded-4 animate-fade-in text-center small">
+                                    <i class="bi bi-check-circle-fill me-2"></i> Ayarlar başarıyla kaydedildi!
+                                </div>
+                            }
+                        </div>
+
                         <div class="mt-4 p-3 rounded-4 bg-white bg-opacity-05 shadow-none" style="border: none !important;">
                             <div class="d-flex justify-content-between align-items-baseline mb-3">
                                 <span class="text-muted small fw-semibold">Son Harcama Tutarı</span>
@@ -101,7 +124,7 @@
                             <p class="mb-0 text-muted">
                                 Paranızı enflasyona karşı korumak için <strong>@BudgetService.CalculateMonthlyErosion().ToString("C2")</strong> 
                                 üzerindeki bir getiri oranına sahip yatırım araçlarını (Hisse, Fon, Altın) değerlendirmelisiniz. 
-                                <br/><small>Sprint 3'te bu yatırımları birlikte takip edeceğiz!</small>
+                                <br/><small>Yatırımlarınızı borsa takibi ekranından izlemeyi unutmayın!</small>
                             </p>
                         </div>
                     }
@@ -120,8 +143,27 @@
 </div>
 
 @code {
+    private bool _isSaving = false;
+    private bool _showSuccess = false;
+
     protected override async Task OnInitializedAsync()
     {
         await BudgetService.LoadReportsAsync();
+    }
+
+    private async Task SaveSettings()
+    {
+        _isSaving = true;
+        StateHasChanged();
+
+        await BudgetService.SaveSettingsAsync();
+
+        _isSaving = false;
+        _showSuccess = true;
+        StateHasChanged();
+
+        await Task.Delay(3000);
+        _showSuccess = false;
+        StateHasChanged();
     }
 }

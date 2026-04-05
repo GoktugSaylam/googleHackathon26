@@ -149,6 +149,17 @@ app.MapGet("/api/portfolio", async (TransactionRepository repo) =>
     return Results.Ok(await repo.GetAllAsync());
 });
 
+app.MapGet("/api/settings", async (ExpenseRepository repo) =>
+{
+    return Results.Ok(await repo.GetSettingsAsync());
+});
+
+app.MapPost("/api/settings", async (UserSettings settings, ExpenseRepository repo) =>
+{
+    await repo.SaveSettingsAsync(settings);
+    return Results.Ok();
+});
+
 app.MapPost("/api/ai/analyze-expenses", async (
     AnalyzeExpensesRequest request,
     StatementAnalysisService analysisService,

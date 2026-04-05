@@ -34,10 +34,43 @@ public class BudgetService
             {
                 AllReports = reports;
             }
+
+            // Ayrıca Ayarları Yükle
+            await LoadSettingsAsync();
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[BudgetService] Veri yükleme hatası: {ex.Message}");
+        }
+    }
+
+    public async Task LoadSettingsAsync()
+    {
+        try
+        {
+            var settings = await _http.GetFromJsonAsync<UserSettings>("api/settings");
+            if (settings != null)
+            {
+                MonthlySalary = settings.MonthlySalary;
+                AnnualInflationRate = settings.AnnualInflationRate;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[BudgetService] Ayar yükleme hatası: {ex.Message}");
+        }
+    }
+
+    public async Task SaveSettingsAsync()
+    {
+        try
+        {
+            var settings = new UserSettings { MonthlySalary = MonthlySalary, AnnualInflationRate = AnnualInflationRate };
+            await _http.PostAsJsonAsync("api/settings", settings);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[BudgetService] Ayar kaydetme hatası: {ex.Message}");
         }
     }
 

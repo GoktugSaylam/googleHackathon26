@@ -43,6 +43,11 @@ public class ExpenseRepository
                 Alternative TEXT,
                 SavingsAdvice TEXT,
                 FOREIGN KEY (ReportPeriod) REFERENCES ExpenseReports(Period) ON DELETE CASCADE
+            );
+            CREATE TABLE IF NOT EXISTS UserSettings (
+                Id INTEGER PRIMARY KEY,
+                MonthlySalary DECIMAL NOT NULL,
+                AnnualInflationRate DECIMAL NOT NULL
             );";
         command.ExecuteNonQuery();
     }
@@ -264,5 +269,45 @@ public class ExpenseRepository
             await transaction.RollbackAsync();
             throw;
         }
+    }
+
+    public async Task<UserSettings> GetSettingsAsync()
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        await connection.OpenAsync();
+
+        var command = connection.CreateCommand();
+        command.CommandText = "SELECT MonthlySalary, AnnualInflationRate FROM UserSettings WHERE Id = 1";
+
+        using var reader = await command.ExecuteReaderAsync();
+        if (await reader.ReadAsync())
+        {
+            return new UserSettings
+            {
+                MonthlySalary = reader.GetDecimal(0),
+                AnnualInflationRate = reader.GetDecimal(1)
+            };
+        }
+        return new UserSettings { MonthlySalary = 40000, AnnualInflationRate = 64.0m };
+    }
+
+    public async Task SaveSettingsAsync(UserSettings settings)
+    {
+        if (settings == null) return;
+        using var connection = new SqliteConnection(_connectionString);
+        await connection.OpenAsync();
+
+        var command = connection.CreateCommand();
+        command.CommandText = @"
+            INSERT INTO UserSettings (Id, MonthlySalary, AnnualInflationRate) 
+            VALUES (1, $salary, $inflation)
+            ON CONFLICT(Id) DO UPDATE SET 
+                MonthlySalary = excluded.MonthlySalary, 
+                AnnualInflationRate = excluded.AnnualInflationRate";
+        
+        command.Parameters.AddWithValue("$salary", settings.MonthlySalary);
+        command.Parameters.AddWithValue("$inflation", settings.AnnualInflationRate);
+        
+        await command.ExecuteNonQueryAsync();
     }
 }
