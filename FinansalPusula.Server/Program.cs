@@ -79,17 +79,20 @@ app.MapPost("/api/portfolio/metrics", async (MetricsRequest request, Transaction
 
     // XIRR Hesapla
     double xirr = metricsService.CalculateXirr(flows);
+    if (double.IsNaN(xirr) || double.IsInfinity(xirr)) xirr = 0;
 
     // CAGR Hesapla
     double totalInvested = Math.Abs(flows.Where(f => f.Amount < 0).Sum(f => f.Amount));
     double cagr = 0;
     if (totalInvested > 0)
     {
-        var firstDate = flows.Min(f => f.Date);
-        double years = (DateTime.Now - firstDate).TotalDays / 365.25;
-        if (years < 1.0 / 365.0) years = 1.0 / 365.0; // En az 1 gün
+        var firstTransactionDate = flows.Min(f => f.Date);
+        // Kısa Süre Koruması: Astronomik sonuçları engellemek için yılı min 1'e sabitle
+        double years = Math.Max((DateTime.Now - firstTransactionDate).TotalDays / 365.25, 1.0);
         cagr = metricsService.CalculateCagr(totalInvested, (double)currentValue, years);
     }
+
+    if (double.IsNaN(cagr) || double.IsInfinity(cagr)) cagr = 0;
 
     return Results.Ok(new { Cagr = cagr * 100, Xirr = xirr * 100 });
 });
