@@ -276,6 +276,7 @@
         if (_totalValueTL > 0)
         {
             var metrics = await PortfolioService.GetPortfolioMetricsAsync(_totalValueTL);
+            if (metrics is not null)
             {
                 _cagr = metrics.Cagr;
                 _xirr = metrics.Xirr;

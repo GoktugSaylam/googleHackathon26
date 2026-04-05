@@ -86,7 +86,7 @@ if (isGoogleConfigured)
         options.Events.OnRemoteFailure = context =>
         {
             var message = Uri.EscapeDataString(context.Failure?.Message ?? "Google OAuth hatasi olustu.");
-            context.Response.Redirect($"/login?error={message}");
+            context.Response.Redirect($"/?authError={message}");
             context.HandleResponse();
             return Task.CompletedTask;
         };
@@ -128,6 +128,57 @@ app.UseBlazorFrameworkFiles();
 app.UseStaticFiles();
 
 app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
+
+if (!isGoogleConfigured)
+{
+    app.Logger.LogWarning("Google OAuth devre disi: Authentication:Google:ClientId veya ClientSecret eksik.");
+}
+
+// ─── API Authentication ───────────────────────────────────────────────────────
+
+app.MapGet("/api/auth/login", async Task<IResult> (HttpContext context, string? returnUrl) =>
+{
+    if (!isGoogleConfigured)
+    {
+        return Results.Problem(
+            detail: "Google OAuth sunucuda tam tanimli degil. Authentication:Google:ClientId ve ClientSecret gereklidir.",
+            title: "Google OAuth devre disi",
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+
+    var normalizedReturnUrl = NormalizeReturnUrl(returnUrl);
+    var properties = new AuthenticationProperties
+    {
+        RedirectUri = normalizedReturnUrl
+    };
+
+    await context.ChallengeAsync(GoogleDefaults.AuthenticationScheme, properties);
+    return Results.Empty;
+});
+
+app.MapGet("/api/auth/logout", async (HttpContext context, string? returnUrl) =>
+{
+    var normalizedReturnUrl = NormalizeReturnUrl(returnUrl);
+    await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+    context.Response.Redirect(normalizedReturnUrl);
+});
+
+app.MapGet("/api/auth/user", (HttpContext context) =>
+{
+    if (context.User.Identity?.IsAuthenticated != true)
+    {
+        return Results.Unauthorized();
+    }
+
+    var claims = context.User.Claims
+        .Where(c => !string.IsNullOrWhiteSpace(c.Type) && !string.IsNullOrWhiteSpace(c.Value))
+        .Select(c => new AuthClaim(c.Type, c.Value))
+        .ToArray();
+
+    return Results.Ok(new AuthUserResponse(true, claims));
+});
 
 // ─── Budget API ───────────────────────────────────────────────────────────────
 
@@ -161,11 +212,17 @@ app.MapPost("/api/settings", async (UserSettings settings, ExpenseRepository rep
 });
 
 app.MapPost("/api/ai/analyze-expenses", async (
+    HttpContext context,
     AnalyzeExpensesRequest request,
     StatementAnalysisService analysisService,
     CancellationToken cancellationToken) =>
 {
-    if (request is null || string.IsNullOrWhiteSpace(request.FileBytesBase64))
+    if (context.User.Identity?.IsAuthenticated != true)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (request is null || string.IsNullOrWhiteSpace(request.FileBytesBase64))  
     {
         return Results.BadRequest(new { message = "Dosya verisi zorunludur." });
     }
@@ -182,7 +239,7 @@ app.MapPost("/api/ai/analyze-expenses", async (
 
     if (fileBytes.Length == 0)
     {
-        return Results.BadRequest(new { message = "Bos dosya gonderilemez." });
+        return Results.BadRequest(new { message = "Bos dosya gonderilemez." }); 
     }
 
     const int maxFileSizeBytes = 10 * 1024 * 1024;
@@ -204,7 +261,7 @@ app.MapPost("/api/ai/analyze-expenses", async (
     {
         return Results.Problem($"Beklenmeyen analiz hatasi: {ex.Message}", statusCode: StatusCodes.Status500InternalServerError);
     }
-}).RequireAuthorization();
+});
 
 app.MapPost("/api/portfolio", async (PortfolioTransaction tx, TransactionRepository repo) =>
 {
@@ -607,3 +664,4 @@ internal sealed record AnalyzeExpensesRequest(string FileBytesBase64, string? Fi
 internal sealed record AuthClaim(string Type, string Value);
 internal sealed record AuthUserResponse(bool IsAuthenticated, AuthClaim[] Claims);
 public record MetricsRequest(decimal CurrentValue, string? Symbol = null);
+

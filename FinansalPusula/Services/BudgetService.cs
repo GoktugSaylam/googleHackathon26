@@ -108,10 +108,11 @@ public class BudgetService
             // Simple merge for local fallback
             if (newReport.Expenses != null)
             {
+                var existingExpenses = existing.Expenses ??= new List<ExpenseItem>();
                 foreach(var exp in newReport.Expenses) 
                 {
-                    if (!existing.Expenses.Any(e => e.Merchant == exp.Merchant && e.Date == exp.Date && e.Amount == exp.Amount))
-                        existing.Expenses.Add(exp);
+                    if (!existingExpenses.Any(e => e.Merchant == exp.Merchant && e.Date == exp.Date && e.Amount == exp.Amount))
+                        existingExpenses.Add(exp);
                 }
             }
             existing.SummaryAdvice = newReport.SummaryAdvice;
