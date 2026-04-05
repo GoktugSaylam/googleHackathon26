@@ -41,6 +41,25 @@ Opsiyonel (frontend'i ayri host olarak da acmak):
 - Kullanıcı bilgisi endpointi: `/api/auth/user`
 - Google callback endpointi (varsayılan): `/signin-google`
 
+## 1.1) Google Hesap Verisi ve Kullanıcı İzolasyonu
+
+Google ile başarılı girişten sonra sunucu tarafında hesap kaydı tutulur.
+
+- Tablo: `GoogleAccounts`
+- Saklanan alanlar: `GoogleUserId`, `Email`, `DisplayName`, `PictureUrl`, `CreatedAtUtc`, `LastLoginAtUtc`, `LastSeenAtUtc`, `IsActive`
+- Token politikası: `access_token` / `refresh_token` veritabanına yazılmaz
+
+Finans verileri kullanıcı bazlı izole edilmiştir:
+
+- Portföy işlemleri: `Transactions` tablosunda `GoogleUserId` ile filtrelenir
+- Bütçe/gider verileri: kullanıcı bazlı scoped tablolarda tutulur (`ExpenseReportsScoped`, `ExpenseItemsScoped`, `SubscriptionItemsScoped`, `UserSettingsScoped`)
+- Endpointler kullanıcı kimliği olmadan çağrılırsa `401 Unauthorized` döner
+
+Geçiş davranışı:
+
+- Eski global kayıtlar otomatik olarak bir kullanıcıya atanmaz
+- Yeni Google hesabı ilk girişte temiz veri görünümü ile başlar
+
 ## 2) Google Cloud Console Ayarları
 
 1. Google Cloud Console'da `OAuth client ID` oluştur.

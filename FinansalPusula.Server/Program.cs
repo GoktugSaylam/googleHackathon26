@@ -90,6 +90,38 @@ if (isGoogleConfigured)
             context.HandleResponse();
             return Task.CompletedTask;
         };
+
+        options.Events.OnTicketReceived = async context =>
+        {
+            var googleUserId = TryResolveGoogleUserId(context.Principal);
+            if (string.IsNullOrWhiteSpace(googleUserId))
+            {
+                return;
+            }
+
+            var email = context.Principal?.FindFirst(ClaimTypes.Email)?.Value
+                ?? context.Principal?.FindFirst("email")?.Value;
+            var displayName = context.Principal?.FindFirst("name")?.Value
+                ?? context.Principal?.Identity?.Name;
+            var pictureUrl = context.Principal?.FindFirst("picture")?.Value;
+            var utcNow = DateTime.UtcNow;
+
+            try
+            {
+                if (context.HttpContext.RequestServices.GetService(typeof(GoogleAccountRepository)) is GoogleAccountRepository accountRepository)
+                {
+                    await accountRepository.UpsertAsync(googleUserId, email, displayName, pictureUrl, utcNow);
+                }
+            }
+            catch (Exception ex)
+            {
+                if (context.HttpContext.RequestServices.GetService(typeof(ILoggerFactory)) is ILoggerFactory loggerFactory)
+                {
+                    var logger = loggerFactory.CreateLogger("GoogleAccountSync");
+                    logger.LogWarning(ex, "Google hesap kaydi guncellenemedi. UserId: {GoogleUserId}", googleUserId);
+                }
+            }
+        };
     });
 }
 
@@ -108,6 +140,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 // SQLite Repository
 builder.Services.AddSingleton<TransactionRepository>();
 builder.Services.AddSingleton<ExpenseRepository>();
+builder.Services.AddSingleton<GoogleAccountRepository>();
 builder.Services.AddSingleton<FinancialMetricsService>();
 
 var app = builder.Build();
@@ -165,12 +198,20 @@ app.MapGet("/api/auth/logout", async (HttpContext context, string? returnUrl) =>
     context.Response.Redirect(normalizedReturnUrl);
 });
 
-app.MapGet("/api/auth/user", (HttpContext context) =>
+app.MapGet("/api/auth/user", async (HttpContext context, GoogleAccountRepository accountRepository) =>
 {
     if (context.User.Identity?.IsAuthenticated != true)
     {
         return Results.Unauthorized();
     }
+
+    var googleUserId = TryResolveGoogleUserId(context.User);
+    if (string.IsNullOrWhiteSpace(googleUserId))
+    {
+        return Results.Unauthorized();
+    }
+
+    await accountRepository.TouchLastSeenAsync(googleUserId, DateTime.UtcNow);
 
     var claims = context.User.Claims
         .Where(c => !string.IsNullOrWhiteSpace(c.Type) && !string.IsNullOrWhiteSpace(c.Value))
@@ -182,32 +223,72 @@ app.MapGet("/api/auth/user", (HttpContext context) =>
 
 // ─── Budget API ───────────────────────────────────────────────────────────────
 
-app.MapGet("/api/budget/reports", async (ExpenseRepository repo) =>
+app.MapGet("/api/budget/reports", async (HttpContext context, ExpenseRepository repo) =>
 {
-    return Results.Ok(await repo.GetAllAsync());
+    var googleUserId = TryResolveGoogleUserId(context.User);
+    if (string.IsNullOrWhiteSpace(googleUserId))
+    {
+        return Results.Unauthorized();
+    }
+
+    return Results.Ok(await repo.GetAllAsync(googleUserId));
 });
 
-app.MapPost("/api/budget/reports", async (ExpenseReport report, ExpenseRepository repo) =>
+app.MapPost("/api/budget/reports", async (HttpContext context, ExpenseReport report, ExpenseRepository repo) =>
 {
-    await repo.AddOrUpdateAsync(report);
+    var googleUserId = TryResolveGoogleUserId(context.User);
+    if (string.IsNullOrWhiteSpace(googleUserId))
+    {
+        return Results.Unauthorized();
+    }
+
+    if (report is null || string.IsNullOrWhiteSpace(report.Period))
+    {
+        return Results.BadRequest(new { message = "Rapor donemi zorunludur." });
+    }
+
+    await repo.AddOrUpdateAsync(report, googleUserId);
     return Results.Ok();
 });
 
 // ─── Portfolio API ────────────────────────────────────────────────────────────
 
-app.MapGet("/api/portfolio", async (TransactionRepository repo) =>
+app.MapGet("/api/portfolio", async (HttpContext context, TransactionRepository repo) =>
 {
-    return Results.Ok(await repo.GetAllAsync());
+    var googleUserId = TryResolveGoogleUserId(context.User);
+    if (string.IsNullOrWhiteSpace(googleUserId))
+    {
+        return Results.Unauthorized();
+    }
+
+    return Results.Ok(await repo.GetAllAsync(googleUserId));
 });
 
-app.MapGet("/api/settings", async (ExpenseRepository repo) =>
+app.MapGet("/api/settings", async (HttpContext context, ExpenseRepository repo) =>
 {
-    return Results.Ok(await repo.GetSettingsAsync());
+    var googleUserId = TryResolveGoogleUserId(context.User);
+    if (string.IsNullOrWhiteSpace(googleUserId))
+    {
+        return Results.Unauthorized();
+    }
+
+    return Results.Ok(await repo.GetSettingsAsync(googleUserId));
 });
 
-app.MapPost("/api/settings", async (UserSettings settings, ExpenseRepository repo) =>
+app.MapPost("/api/settings", async (HttpContext context, UserSettings settings, ExpenseRepository repo) =>
 {
-    await repo.SaveSettingsAsync(settings);
+    var googleUserId = TryResolveGoogleUserId(context.User);
+    if (string.IsNullOrWhiteSpace(googleUserId))
+    {
+        return Results.Unauthorized();
+    }
+
+    if (settings is null)
+    {
+        return Results.BadRequest(new { message = "Ayarlar bos olamaz." });
+    }
+
+    await repo.SaveSettingsAsync(settings, googleUserId);
     return Results.Ok();
 });
 
@@ -263,23 +344,41 @@ app.MapPost("/api/ai/analyze-expenses", async (
     }
 });
 
-app.MapPost("/api/portfolio", async (PortfolioTransaction tx, TransactionRepository repo) =>
+app.MapPost("/api/portfolio", async (HttpContext context, PortfolioTransaction tx, TransactionRepository repo) =>
 {
-    await repo.AddAsync(tx);
+    var googleUserId = TryResolveGoogleUserId(context.User);
+    if (string.IsNullOrWhiteSpace(googleUserId))
+    {
+        return Results.Unauthorized();
+    }
+
+    await repo.AddAsync(tx, googleUserId);
     return Results.Ok();
 });
 
-app.MapDelete("/api/portfolio/{id}", async (string id, TransactionRepository repo) =>
+app.MapDelete("/api/portfolio/{id}", async (HttpContext context, string id, TransactionRepository repo) =>
 {
-    await repo.DeleteAsync(id);
+    var googleUserId = TryResolveGoogleUserId(context.User);
+    if (string.IsNullOrWhiteSpace(googleUserId))
+    {
+        return Results.Unauthorized();
+    }
+
+    await repo.DeleteAsync(id, googleUserId);
     return Results.Ok();
 });
 
-app.MapPost("/api/portfolio/metrics", async (MetricsRequest request, TransactionRepository repo, ExpenseRepository expenseRepo, FinancialMetricsService metricsService) =>
+app.MapPost("/api/portfolio/metrics", async (HttpContext context, MetricsRequest request, TransactionRepository repo, ExpenseRepository expenseRepo, FinancialMetricsService metricsService) =>
 {
-    var settings = await expenseRepo.GetSettingsAsync();
+    var googleUserId = TryResolveGoogleUserId(context.User);
+    if (string.IsNullOrWhiteSpace(googleUserId))
+    {
+        return Results.Unauthorized();
+    }
+
+    var settings = await expenseRepo.GetSettingsAsync(googleUserId);
     var currentValue = request.CurrentValue;
-    var txs = await repo.GetAllAsync();
+    var txs = await repo.GetAllAsync(googleUserId);
     
     // Eğer sembol parametresi geldiyse sadece o hisseyi filtrele
     if (!string.IsNullOrEmpty(request.Symbol))
@@ -658,6 +757,31 @@ static string NormalizeReturnUrl(string? returnUrl)
     }
 
     return value;
+}
+
+static string? TryResolveGoogleUserId(ClaimsPrincipal? principal)
+{
+    if (principal?.Identity?.IsAuthenticated != true)
+    {
+        return null;
+    }
+
+    var nameIdentifier = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    if (!string.IsNullOrWhiteSpace(nameIdentifier))
+    {
+        return nameIdentifier;
+    }
+
+    var sub = principal.FindFirst("sub")?.Value;
+    if (!string.IsNullOrWhiteSpace(sub))
+    {
+        return sub;
+    }
+
+    var email = principal.FindFirst(ClaimTypes.Email)?.Value
+        ?? principal.FindFirst("email")?.Value;
+
+    return string.IsNullOrWhiteSpace(email) ? null : email;
 }
 
 internal sealed record AnalyzeExpensesRequest(string FileBytesBase64, string? FileName);
