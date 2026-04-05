@@ -8,7 +8,7 @@
     <div class="row">
         <div class="col-xl-10 offset-xl-1">
             <div class="d-flex align-items-center mb-5 mt-4">
-                <div class="p-3 rounded-4 bg-primary bg-opacity-10 me-4">
+                <div class="p-3 rounded-4 bg-white bg-opacity-05 border-0 me-4" style="border: none !important; backdrop-filter: blur(8px);">
                     <i class="bi bi-shield-lock text-primary fs-2"></i>
                 </div>
                 <div>
@@ -41,14 +41,19 @@
                             </div>
                         </div>
 
-                        <div class="p-3 rounded-4 bg-white bg-opacity-05 border border-white border-opacity-10 shadow-sm mt-3">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="text-muted small">Son Harcama Tutarı</span>
-                                <span class="fw-bold">@BudgetService.LastReport?.TotalSpending.ToString("C0")</span>
+                        <div class="mt-4 p-3 rounded-4 bg-white bg-opacity-05 shadow-none" style="border: none !important;">
+                            <div class="d-flex justify-content-between align-items-baseline mb-3">
+                                <span class="text-muted small fw-semibold">Son Harcama Tutarı</span>
+                                <span class="text-white fw-bold">@BudgetService.LastReport?.TotalSpending.ToString("C0")</span>
                             </div>
-                            <div class="d-flex justify-content-between align-items-center pt-2 border-top border-white border-opacity-05">
-                                <span class="text-muted small">Boşta Kalan Nakit</span>
-                                <span class="text-gradient fw-bold fs-5">@BudgetService.CurrentIdleCash.ToString("C0")</span>
+                            
+                            <div class="pt-3 border-top border-white border-opacity-10">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-muted small fw-semibold">Boşta Kalan Nakit</span>
+                                    <div class="text-end">
+                                        <span class="text-gradient fw-bold fs-4 d-block">@BudgetService.CurrentIdleCash.ToString("C0")</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

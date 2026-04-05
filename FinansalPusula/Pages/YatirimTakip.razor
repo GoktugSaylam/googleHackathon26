@@ -13,6 +13,44 @@
         <div class="col-xl-11 mx-auto">
             
             <!-- Üst Kartlar: Bakiye ve Portföy -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-3">
+                    <div class="metric-card h-100">
+                        <div class="text-muted small fw-bold mb-2">PORTFÖY DEĞERİ (TL)</div>
+                        <h2 class="fw-bold mb-0 text-white">₺@_totalValueTL.ToString("N0")</h2>
+                        <span class="text-success-bright x-small fw-bold">+%7,2 ▲</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card h-100">
+                        <div class="text-muted small fw-bold mb-2">PORTFÖY DEĞERİ (USD)</div>
+                        <h2 class="fw-bold mb-0 text-white">$@_totalValueUSD.ToString("N0")</h2>
+                        <span class="text-success-bright x-small fw-bold">+%4,1 ▲</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card h-100 border-primary-light position-relative overflow-hidden">
+                        <div class="text-muted small fw-bold mb-2">CAGR (YILLIK BÜYÜME)</div>
+                        <h2 class="fw-bold mb-1 @_getMetricColor(_cagr)">%@_cagr.ToString("N2")</h2>
+                        <div class="text-muted x-small opacity-75">Geçen yıla oranla</div>
+                        <i class="bi bi-graph-up position-absolute end-0 bottom-0 opacity-10 fs-1 me-2 mb-1"></i>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card h-100 border-primary-light position-relative overflow-hidden">
+                        <div class="text-muted small fw-bold mb-2">XIRR (GERÇEK GETİRİ)</div>
+                        <h2 class="fw-bold mb-1 @_getMetricColor(_xirr)">%@_xirr.ToString("N2")</h2>
+                        <div class="mt-1">
+                            <span class="badge bg-success bg-opacity-20 text-success-bright border border-success border-opacity-25" style="font-size: 0.65rem;">
+                                <i class="bi bi-trophy-fill me-1"></i> BIST100'ü yendi (Enflasyonun %12 üzerinde)
+                            </span>
+                        </div>
+                        <i class="bi bi-percent position-absolute end-0 bottom-0 opacity-10 fs-1 me-2 mb-1"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- İkinci Durum Kartları -->
             <div class="row g-4 mb-5">
                 <div class="col-md-3">
                     <div class="metric-card h-100">
@@ -26,20 +64,6 @@
                         <div class="text-muted small fw-bold mb-2">USD BAKİYE</div>
                         <h2 class="fw-bold mb-0 text-white">$1.240,00</h2>
                         <i class="bi bi-currency-dollar position-absolute end-0 bottom-0 opacity-10 fs-1 me-3 mb-2"></i>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="metric-card h-100 border-primary-light">
-                        <div class="text-muted small fw-bold mb-2">PORTFÖY DEĞERİ (TL)</div>
-                        <h2 class="fw-bold mb-0 text-white">₺@_totalValueTL.ToString("N0")</h2>
-                        <span class="text-success-bright x-small fw-bold">+%7,2 ▲</span>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="metric-card h-100 border-primary-light">
-                        <div class="text-muted small fw-bold mb-2">PORTFÖY DEĞERİ (USD)</div>
-                        <h2 class="fw-bold mb-0 text-white">$@_totalValueUSD.ToString("N0")</h2>
-                        <span class="text-success-bright x-small fw-bold">+%4,1 ▲</span>
                     </div>
                 </div>
             </div>
@@ -150,6 +174,8 @@
     private List<StockData> _portfolioQuotes = new();
     private decimal _totalValueTL = 0;
     private decimal _totalValueUSD = 0;
+    private double _cagr = 0;
+    private double _xirr = 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -163,6 +189,7 @@
             .Where(t => t.IslemTipi == TransactionType.Alis || t.IslemTipi == TransactionType.Satis)
             .GroupBy(t => t.Sembol);
 
+        _portfolioQuotes.Clear();
         foreach (var group in groups)
         {
             var symbol = group.Key;
@@ -172,7 +199,7 @@
 
             var totalCost = group.Where(t => t.IslemTipi == TransactionType.Alis).Sum(t => t.ToplamTutar);
             var buyQuantity = group.Where(t => t.IslemTipi == TransactionType.Alis).Sum(t => t.Adet);
-            var avgCost = totalCost / buyQuantity;
+            var avgCost = buyQuantity > 0 ? totalCost / buyQuantity : 0;
 
             // Fiyat bilgisini çek
             var price = await YahooService.GetLivePriceAsync(symbol);
@@ -188,6 +215,17 @@
 
         _totalValueTL = _portfolioQuotes.Sum(s => s.TotalValue);
         _totalValueUSD = _totalValueTL / 32.5m; // TODO: Canlı kur
+
+        // Metrikleri Backend'den Çek
+        if (_totalValueTL > 0)
+        {
+            var metrics = await PortfolioService.GetPortfolioMetricsAsync(_totalValueTL);
+            if (metrics != null)
+            {
+                _cagr = metrics.Cagr;
+                _xirr = metrics.Xirr;
+            }
+        }
 
         // Grafikleri çiz
         await Task.Delay(100);
@@ -217,5 +255,12 @@
     private void NavigateToDetail(string symbol)
     {
         NavManager.NavigateTo($"/hisse-detay/{symbol}");
+    }
+
+    private string _getMetricColor(double value)
+    {
+        if (value > 0) return "text-success-bright";
+        if (value < 0) return "text-danger-bright";
+        return "text-white";
     }
 }

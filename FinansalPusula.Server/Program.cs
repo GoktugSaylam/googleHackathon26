@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.ResponseCompression;
 using FinansalPusula.Server.Data;
+using FinansalPusula.Server.Services;
 using FinansalPusula.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,6 +12,7 @@ builder.Services.AddHttpClient();
 
 // SQLite Repository
 builder.Services.AddSingleton<TransactionRepository>();
+builder.Services.AddSingleton<FinancialMetricsService>();
 
 var app = builder.Build();
 
@@ -48,6 +50,48 @@ app.MapDelete("/api/portfolio/{id}", async (string id, TransactionRepository rep
 {
     await repo.DeleteAsync(id);
     return Results.Ok();
+});
+
+app.MapPost("/api/portfolio/metrics", async (MetricsRequest request, TransactionRepository repo, FinancialMetricsService metricsService) =>
+{
+    var currentValue = request.CurrentValue;
+    var txs = await repo.GetAllAsync();
+    if (!txs.Any()) return Results.Ok(new { Cagr = 0.0, Xirr = 0.0 });
+
+    var flows = new List<(DateTime Date, double Amount)>();
+    
+    // İşlemleri nakit akışına çevir (Alışlar -, Satışlar/Temettüler +)
+    foreach (var tx in txs.OrderBy(t => t.Tarih))
+    {
+        double amount = (double)(tx.Adet * tx.BirimFiyat);
+        if (tx.IslemTipi == TransactionType.Alis || tx.IslemTipi == TransactionType.Buy)
+        {
+            flows.Add((tx.Tarih, -amount));
+        }
+        else if (tx.IslemTipi == TransactionType.Satis || tx.IslemTipi == TransactionType.Sell || tx.IslemTipi == TransactionType.Temettu)
+        {
+            flows.Add((tx.Tarih, amount));
+        }
+    }
+
+    // Bugünün tarihi ve güncel portföy değerini ekle (+)
+    flows.Add((DateTime.Now, (double)currentValue));
+
+    // XIRR Hesapla
+    double xirr = metricsService.CalculateXirr(flows);
+
+    // CAGR Hesapla
+    double totalInvested = Math.Abs(flows.Where(f => f.Amount < 0).Sum(f => f.Amount));
+    double cagr = 0;
+    if (totalInvested > 0)
+    {
+        var firstDate = flows.Min(f => f.Date);
+        double years = (DateTime.Now - firstDate).TotalDays / 365.25;
+        if (years < 1.0 / 365.0) years = 1.0 / 365.0; // En az 1 gün
+        cagr = metricsService.CalculateCagr(totalInvested, (double)currentValue, years);
+    }
+
+    return Results.Ok(new { Cagr = cagr * 100, Xirr = xirr * 100 });
 });
 
 // ─── Yahoo Finance Proxy (With Split Correction for Raw Prices) ─────────────────
@@ -345,3 +389,5 @@ app.MapControllers();
 app.MapFallbackToFile("index.html");
 
 app.Run();
+
+public record MetricsRequest(decimal CurrentValue);

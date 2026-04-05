@@ -63,4 +63,23 @@ public class PortfolioService
             Console.WriteLine($"[PortfolioService] DeleteTransaction Hatası: {ex.Message}");
         }
     }
+
+    /// <summary>
+    /// Portföy performans metriklerini (CAGR ve XIRR) çeker.
+    /// </summary>
+    public async Task<PortfolioMetricsRecord?> GetPortfolioMetricsAsync(decimal currentTotalValue)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync("/api/portfolio/metrics", new { CurrentValue = currentTotalValue });
+            return await response.Content.ReadFromJsonAsync<PortfolioMetricsRecord>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[PortfolioService] GetPortfolioMetrics Hatası: {ex.Message}");
+            return null;
+        }
+    }
 }
+
+public record PortfolioMetricsRecord(double Cagr, double Xirr);
