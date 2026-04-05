@@ -218,6 +218,16 @@ body {
     color: #ff4d4d !important;
 }
 
+.text-warning-bright {
+    color: #ffab00 !important;
+}
+
+.badge-warning-custom {
+    background: rgba(255, 171, 0, 0.1) !important;
+    color: #ffab00 !important;
+    border: 1px solid rgba(255, 171, 0, 0.2) !important;
+}
+
 .account-chip {
     display: flex;
     align-items: center;

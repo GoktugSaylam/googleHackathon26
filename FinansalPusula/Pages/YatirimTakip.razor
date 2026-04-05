@@ -49,16 +49,19 @@
                         <div class="text-muted small fw-bold mb-2">XIRR (GERÇEK GETİRİ)</div>
                         <h2 class="fw-bold mb-1 @_getMetricColor(_xirr)">%@_xirr.ToString("N2")</h2>
                         <div class="mt-1">
+                            @{
+                                var _inflDiff = Math.Abs(_cagr - _targetInflation).ToString("N1");
+                            }
                             @if (_cagr > _targetInflation)
                             {
                                 <span class="badge bg-success bg-opacity-20 text-success-bright border border-success border-opacity-25" style="font-size: 0.65rem;">
-                                    <i class="bi bi-trophy-fill me-1"></i> Enflasyonun (%@(_cagr - _targetInflation).ToString("N1")) üzerinde!
+                                    <i class="bi bi-trophy-fill me-1"></i> Enflasyonun %@_inflDiff üzerinde!
                                 </span>
                             }
                             else
                             {
-                                <span class="badge bg-warning bg-opacity-20 text-warning border border-warning border-opacity-25" style="font-size: 0.65rem;">
-                                    <i class="bi bi-info-circle me-1"></i> Enflasyonun (%@(_targetInflation - _cagr).ToString("N1")) altında kalındı.
+                                <span class="badge badge-warning-custom shadow-sm" style="font-size: 0.65rem;">
+                                    <i class="bi bi-info-circle me-1"></i> Enflasyonun %@_inflDiff altında kalındı.
                                 </span>
                             }
                         </div>

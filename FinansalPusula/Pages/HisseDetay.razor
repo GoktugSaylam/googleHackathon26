@@ -492,7 +492,13 @@
             }
 
             // CAGR Çek (Backend'den sembol bazlı)
-            var perfMetrics = await PortfolioService.GetPortfolioMetricsAsync(_metrics.GuncelDeger, actualSymbol);
+            // Kullanıcının "gerçek" portföy getirisini göstermek için simülasyon (DRIP) değerini değil, 
+            // gerçek net lot üzerinden hesaplanan güncel değeri gönder. Aksi halde DRIP simülasyonu getiri oranını yapay olarak şişirir.
+            var actualNetQuantity = _hisseTxs.Where(t => t.IslemTipi == TransactionType.Alis || t.IslemTipi == TransactionType.Buy).Sum(t => t.Adet) 
+                                  - _hisseTxs.Where(t => t.IslemTipi == TransactionType.Satis || t.IslemTipi == TransactionType.Sell).Sum(t => t.Adet);
+            var actualCurrentValue = actualNetQuantity > 0 ? actualNetQuantity * livePrice : 0;
+            
+            var perfMetrics = await PortfolioService.GetPortfolioMetricsAsync(actualCurrentValue, actualSymbol);
             if (perfMetrics != null)
             {
                 _cagr = perfMetrics.Cagr;
