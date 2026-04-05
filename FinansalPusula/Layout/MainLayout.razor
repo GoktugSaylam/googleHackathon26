@@ -1,5 +1,8 @@
 @inherits LayoutComponentBase
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
 @inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <div class="page overflow-hidden">
     <div class="sidebar shrink-0 h-screen sticky top-0">
@@ -8,12 +11,27 @@
 
     <main class="flex-1 overflow-y-auto h-screen">
         <div class="px-4 py-3 d-flex justify-content-end border-bottom border-secondary border-opacity-10 mb-4 h-16 align-items-center">
-            <div class="account-chip me-3">
-                <div class="account-avatar account-avatar-fallback">FP</div>
-                <div class="account-meta d-none d-sm-flex">
-                    <span class="account-name">Yatırımcı</span>
-                    <span class="account-email">Yerel Oturum</span>
+            <div class="d-flex align-items-center gap-2">
+                <div class="account-chip me-2">
+                    <div class="account-avatar account-avatar-fallback">@_avatarText</div>
+                    <div class="account-meta d-none d-sm-flex">
+                        <span class="account-name">@_displayName</span>
+                        <span class="account-email">@_email</span>
+                    </div>
                 </div>
+
+                @if (_isAuthenticated)
+                {
+                    <button class="btn btn-sm btn-outline-light" @onclick="Logout">
+                        Cikis Yap
+                    </button>
+                }
+                else
+                {
+                    <button class="btn btn-sm btn-primary" @onclick="StartLogin">
+                        Google ile Giris Yap
+                    </button>
+                }
             </div>
         </div>
 
@@ -24,5 +42,87 @@
 </div>
 
 @code {
-    // Auth logic removed as requested per revert.
+    private bool _isAuthenticated;
+    private string _displayName = "Yatirimci";
+    private string _email = "Yerel Oturum";
+    private string _avatarText = "FP";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshAuthStateAsync();
+    }
+
+    private async Task RefreshAuthStateAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        _isAuthenticated = user.Identity?.IsAuthenticated == true;
+
+        if (!_isAuthenticated)
+        {
+            _displayName = "Yatirimci";
+            _email = "Yerel Oturum";
+            _avatarText = "FP";
+            return;
+        }
+
+        _displayName = user.FindFirst("name")?.Value
+            ?? user.Identity?.Name
+            ?? "Google Kullanicisi";
+
+        _email = user.FindFirst(ClaimTypes.Email)?.Value
+            ?? "Google ile dogrulandi";
+
+        _avatarText = BuildAvatarText(_displayName);
+    }
+
+    private void StartLogin()
+    {
+        var returnUrl = BuildReturnUrl();
+        Navigation.NavigateTo($"/api/auth/login?returnUrl={Uri.EscapeDataString(returnUrl)}", forceLoad: true);
+    }
+
+    private void Logout()
+    {
+        var returnUrl = BuildReturnUrl();
+        Navigation.NavigateTo($"/api/auth/logout?returnUrl={Uri.EscapeDataString(returnUrl)}", forceLoad: true);
+    }
+
+    private string BuildReturnUrl()
+    {
+        var relative = Navigation.ToBaseRelativePath(Navigation.Uri);
+        if (string.IsNullOrWhiteSpace(relative))
+        {
+            return "/";
+        }
+
+        if (!relative.StartsWith('/'))
+        {
+            relative = $"/{relative}";
+        }
+
+        return relative;
+    }
+
+    private static string BuildAvatarText(string displayName)
+    {
+        var parts = displayName
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        if (parts.Length == 0)
+        {
+            return "FP";
+        }
+
+        if (parts.Length == 1)
+        {
+            var token = parts[0];
+            return token.Length >= 2
+                ? token[..2].ToUpperInvariant()
+                : token.ToUpperInvariant();
+        }
+
+        return string.Concat(parts[0][0], parts[1][0]).ToUpperInvariant();
+    }
 }

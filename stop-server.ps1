@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 
 $running = Get-CimInstance Win32_Process | Where-Object {
     $_.Name -eq 'FinansalPusula.Server.exe' -or
-    ($_.Name -eq 'dotnet.exe' -and ($_.CommandLine ?? '') -match 'FinansalPusula.Server')
+    ($_.Name -eq 'dotnet.exe' -and -not [string]::IsNullOrWhiteSpace($_.CommandLine) -and $_.CommandLine -match 'FinansalPusula.Server')
 }
 
 if (-not $running) {

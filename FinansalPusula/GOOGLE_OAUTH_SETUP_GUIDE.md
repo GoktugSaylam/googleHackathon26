@@ -36,9 +36,9 @@ Opsiyonel (frontend'i ayri host olarak da acmak):
 
 - İstemci proje: `FinansalPusula` (Blazor WebAssembly UI)
 - Sunucu proje: `FinansalPusula.Server` (ASP.NET Core BFF + Google OAuth)
-- Login endpointi: `/bff/login`
-- Logout endpointi: `/bff/logout`
-- Kullanıcı bilgisi endpointi: `/bff/user`
+- Login endpointi: `/api/auth/login`
+- Logout endpointi: `/api/auth/logout`
+- Kullanıcı bilgisi endpointi: `/api/auth/user`
 - Google callback endpointi (varsayılan): `/signin-google`
 
 ## 2) Google Cloud Console Ayarları
@@ -85,7 +85,7 @@ Uygulama adresi:
 ## 5) Doğrulama Checklist
 
 1. Uygulamayı açınca login ekranı gelmeli.
-2. `Google ile Giriş Yap` tıklanınca `/bff/login` üzerinden Google'a gitmeli.
+2. `Google ile Giriş Yap` tıklanınca `/api/auth/login` üzerinden Google'a gitmeli.
 3. Google dönüşü sonrası kullanıcı ana ekrana yönlenmeli.
 4. Sağ üstte kullanıcı adı/e-posta görünmeli.
 5. `Çıkış` ile oturum kapanmalı ve login ekranına dönmeli.

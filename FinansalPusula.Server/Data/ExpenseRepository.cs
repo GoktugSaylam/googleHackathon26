@@ -190,7 +190,10 @@ public class ExpenseRepository
                     dupCmd.Parameters.AddWithValue("$date", exp.Date ?? "");
                     dupCmd.Parameters.AddWithValue("$amount", exp.Amount);
 
-                    var count = (long)(await dupCmd.ExecuteScalarAsync());
+                    var scalarCount = await dupCmd.ExecuteScalarAsync();
+                    var count = scalarCount is null or DBNull
+                        ? 0L
+                        : Convert.ToInt64(scalarCount);
                     if (count == 0)
                     {
                         var itemCmd = connection.CreateCommand();

@@ -26,7 +26,7 @@ public sealed class ServerAuthStateProvider(HttpClient httpClient) : Authenticat
         HttpResponseMessage response;
         try
         {
-            response = await httpClient.GetAsync("bff/user");
+            response = await httpClient.GetAsync("/api/auth/user");
         }
         catch
         {
