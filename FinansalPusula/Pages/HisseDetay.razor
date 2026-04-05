@@ -6,7 +6,7 @@
 @inject PortfolioService PortfolioService
 @inject InvestmentService HistoricalDataService
 
-<PageTitle>@Symbol Analiz - HisseMetre</PageTitle>
+<PageTitle>@Symbol Analiz - Budget</PageTitle>
 
 <div class="container-fluid animate-fade-in p-4">
     <div class="row g-4">
@@ -175,7 +175,7 @@
                             <span class="fw-bold text-success-bright">₺@(_expectedNextDividend.ToString("N2"))</span>
                         </div>
                         <div class="d-flex justify-content-between mb-0 pb-2">
-                            <span class="text-muted">Temettü Skor (Pusula)</span>
+                            <span class="text-muted">Temettü Skor (Budget)</span>
                             <span class="fw-bold text-purple">8.2 / 10</span>
                         </div>
                     </div>
@@ -492,7 +492,13 @@
             }
 
             // CAGR Çek (Backend'den sembol bazlı)
-            var perfMetrics = await PortfolioService.GetPortfolioMetricsAsync(_metrics.GuncelDeger, actualSymbol);
+            // Kullanıcının "gerçek" portföy getirisini göstermek için simülasyon (DRIP) değerini değil, 
+            // gerçek net lot üzerinden hesaplanan güncel değeri gönder. Aksi halde DRIP simülasyonu getiri oranını yapay olarak şişirir.
+            var actualNetQuantity = _hisseTxs.Where(t => t.IslemTipi == TransactionType.Alis || t.IslemTipi == TransactionType.Buy).Sum(t => t.Adet) 
+                                  - _hisseTxs.Where(t => t.IslemTipi == TransactionType.Satis || t.IslemTipi == TransactionType.Sell).Sum(t => t.Adet);
+            var actualCurrentValue = actualNetQuantity > 0 ? actualNetQuantity * livePrice : 0;
+            
+            var perfMetrics = await PortfolioService.GetPortfolioMetricsAsync(actualCurrentValue, actualSymbol);
             if (perfMetrics != null)
             {
                 _cagr = perfMetrics.Cagr;

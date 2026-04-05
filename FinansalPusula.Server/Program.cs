@@ -419,9 +419,9 @@ app.MapPost("/api/portfolio/metrics", async (HttpContext context, MetricsRequest
     double cagr = 0;
     if (totalInvested > 0)
     {
-        var firstTransactionDate = flows.Min(f => f.Date);
-        // Kısa Süre Koruması: Astronomik sonuçları engellemek için yılı min 1'e sabitle
-        double years = Math.Max((DateTime.Now - firstTransactionDate).TotalDays / 365.25, 1.0);
+        var firstTransactionDate = flows.Where(f => f.Amount < 0).Min(f => f.Date);
+        // Gerçek süreyi kullan; 30 günden kısa yatırımlar için min 30 gün uygula (sonsuz değerleri engeller)
+        double years = Math.Max((DateTime.Now - firstTransactionDate).TotalDays / 365.25, 30.0 / 365.25);
         
         // Gerçekçi CAGR için: Güncel Değer + Çekilen Nakitler
         double totalEndValue = (double)currentValue + totalWithdrawn;

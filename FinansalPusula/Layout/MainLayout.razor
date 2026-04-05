@@ -45,7 +45,7 @@
     private bool _isAuthenticated;
     private string _displayName = "Yatirimci";
     private string _email = "Yerel Oturum";
-    private string _avatarText = "FP";
+    private string _avatarText = "BU";
 
     protected override async Task OnInitializedAsync()
     {
@@ -63,7 +63,7 @@
         {
             _displayName = "Yatirimci";
             _email = "Yerel Oturum";
-            _avatarText = "FP";
+            _avatarText = "BU";
             return;
         }
 
@@ -112,7 +112,7 @@
 
         if (parts.Length == 0)
         {
-            return "FP";
+            return "BU";
         }
 
         if (parts.Length == 1)
