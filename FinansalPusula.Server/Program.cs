@@ -1,15 +1,25 @@
+<<<<<<< HEAD
 using System.Security.Claims;
 using FinansalPusula.Server.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.HttpOverrides;
+=======
+using Microsoft.AspNetCore.ResponseCompression;
+using FinansalPusula.Server.Data;
+using FinansalPusula.Server.Services;
+using FinansalPusula.Services;
+>>>>>>> 63ca2651a1b900fcc4e12909ce1f025e790bbaac
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add services to the container.
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
+builder.Services.AddHttpClient();
 
+<<<<<<< HEAD
 var googleClientId = builder.Configuration["Authentication:Google:ClientId"];
 var googleClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
 var googleCallbackPath = builder.Configuration["Authentication:Google:CallbackPath"];
@@ -99,9 +109,15 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownNetworks.Clear();
     options.KnownProxies.Clear();
 });
+=======
+// SQLite Repository
+builder.Services.AddSingleton<TransactionRepository>();
+builder.Services.AddSingleton<FinancialMetricsService>();
+>>>>>>> 63ca2651a1b900fcc4e12909ce1f025e790bbaac
 
 var app = builder.Build();
 
+// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseWebAssemblyDebugging();
@@ -112,61 +128,20 @@ else
     app.UseHsts();
 }
 
-app.UseForwardedHeaders();
 app.UseHttpsRedirection();
 app.UseBlazorFrameworkFiles();
 app.UseStaticFiles();
 
 app.UseRouting();
 
-app.UseAuthentication();
-app.UseAuthorization();
+// ─── Portfolio API ────────────────────────────────────────────────────────────
 
-app.MapRazorPages();
-app.MapControllers();
-
-app.MapGet("/bff/login", (string? returnUrl) =>
+app.MapGet("/api/portfolio", async (TransactionRepository repo) =>
 {
-    if (!isGoogleConfigured)
-    {
-        return Results.Problem(
-            "Google OAuth ayarlari eksik. Authentication:Google:ClientId ve Authentication:Google:ClientSecret degerlerini server tarafinda tanimlayin.",
-            statusCode: StatusCodes.Status503ServiceUnavailable);
-    }
-
-    var safeReturnUrl = NormalizeReturnUrl(returnUrl);
-    var properties = new AuthenticationProperties
-    {
-        RedirectUri = safeReturnUrl
-    };
-
-    return Results.Challenge(properties, [GoogleDefaults.AuthenticationScheme]);
-}).AllowAnonymous();
-
-app.MapGet("/bff/logout", async (HttpContext context, string? returnUrl) =>
-{
-    await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-
-    var safeReturnUrl = NormalizeReturnUrl(returnUrl);
-    return Results.Redirect($"/login?returnUrl={Uri.EscapeDataString(safeReturnUrl)}");
-}).AllowAnonymous();
-
-app.MapGet("/bff/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
-
-app.MapGet("/bff/user", (ClaimsPrincipal user) =>
-{
-    if (user.Identity?.IsAuthenticated != true)
-    {
-        return Results.Unauthorized();
-    }
-
-    var claims = user.Claims
-        .Select(c => new AuthClaim(c.Type, c.Value))
-        .ToArray();
-
-    return Results.Ok(new AuthUserResponse(true, claims));
+    return Results.Ok(await repo.GetAllAsync());
 });
 
+<<<<<<< HEAD
 app.MapPost("/api/ai/analyze-expenses", async (
     AnalyzeExpensesRequest request,
     StatementAnalysisService analysisService,
@@ -214,22 +189,81 @@ app.MapPost("/api/ai/analyze-expenses", async (
 }).RequireAuthorization();
 
 app.MapGet("/api/stock/price/{symbol}", async (string symbol, string? date) =>
+=======
+app.MapPost("/api/portfolio", async (PortfolioTransaction tx, TransactionRepository repo) =>
+>>>>>>> 63ca2651a1b900fcc4e12909ce1f025e790bbaac
 {
-    using var client = new HttpClient();
+    await repo.AddAsync(tx);
+    return Results.Ok();
+});
+
+app.MapDelete("/api/portfolio/{id}", async (string id, TransactionRepository repo) =>
+{
+    await repo.DeleteAsync(id);
+    return Results.Ok();
+});
+
+app.MapPost("/api/portfolio/metrics", async (MetricsRequest request, TransactionRepository repo, FinancialMetricsService metricsService) =>
+{
+    var currentValue = request.CurrentValue;
+    var txs = await repo.GetAllAsync();
+    if (!txs.Any()) return Results.Ok(new { Cagr = 0.0, Xirr = 0.0 });
+
+    var flows = new List<(DateTime Date, double Amount)>();
+    
+    // İşlemleri nakit akışına çevir (Alışlar -, Satışlar/Temettüler +)
+    foreach (var tx in txs.OrderBy(t => t.Tarih))
+    {
+        double amount = (double)(tx.Adet * tx.BirimFiyat);
+        if (tx.IslemTipi == TransactionType.Alis || tx.IslemTipi == TransactionType.Buy)
+        {
+            flows.Add((tx.Tarih, -amount));
+        }
+        else if (tx.IslemTipi == TransactionType.Satis || tx.IslemTipi == TransactionType.Sell || tx.IslemTipi == TransactionType.Temettu)
+        {
+            flows.Add((tx.Tarih, amount));
+        }
+    }
+
+    // Bugünün tarihi ve güncel portföy değerini ekle (+)
+    flows.Add((DateTime.Now, (double)currentValue));
+
+    // XIRR Hesapla
+    double xirr = metricsService.CalculateXirr(flows);
+
+    // CAGR Hesapla
+    double totalInvested = Math.Abs(flows.Where(f => f.Amount < 0).Sum(f => f.Amount));
+    double cagr = 0;
+    if (totalInvested > 0)
+    {
+        var firstDate = flows.Min(f => f.Date);
+        double years = (DateTime.Now - firstDate).TotalDays / 365.25;
+        if (years < 1.0 / 365.0) years = 1.0 / 365.0; // En az 1 gün
+        cagr = metricsService.CalculateCagr(totalInvested, (double)currentValue, years);
+    }
+
+    return Results.Ok(new { Cagr = cagr * 100, Xirr = xirr * 100 });
+});
+
+// ─── Yahoo Finance Proxy (With Split Correction for Raw Prices) ─────────────────
+
+app.MapGet("/api/stock/price/{symbol}", async (string symbol, string? date, IHttpClientFactory factory) =>
+{
+    using var client = factory.CreateClient();
     client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
-    client.Timeout = TimeSpan.FromSeconds(15);
 
     try
     {
-        var formattedSymbol = symbol.Trim().ToUpper();
-        if (!formattedSymbol.EndsWith(".IS")) formattedSymbol += ".IS";
+        var cleanSymbol = symbol.Split('.')[0].ToUpper();
+        var formattedSymbol = cleanSymbol + ".IS";
 
         string yahooUrl;
-
-        if (!string.IsNullOrEmpty(date) && DateTime.TryParse(date, out var targetDate))
+        DateTime? targetDate = null;
+        if (!string.IsNullOrEmpty(date) && DateTime.TryParse(date, out var parsedDate))
         {
-            var p1 = ((DateTimeOffset)DateTime.SpecifyKind(targetDate.Date.AddDays(-3), DateTimeKind.Local)).ToUnixTimeSeconds();
-            var p2 = ((DateTimeOffset)DateTime.SpecifyKind(targetDate.Date.AddDays(1), DateTimeKind.Local)).ToUnixTimeSeconds();
+            targetDate = parsedDate;
+            var p1 = ((DateTimeOffset)DateTime.SpecifyKind(targetDate.Value.Date.AddDays(-5), DateTimeKind.Local)).ToUnixTimeSeconds();
+            var p2 = ((DateTimeOffset)DateTime.SpecifyKind(targetDate.Value.Date.AddDays(2), DateTimeKind.Local)).ToUnixTimeSeconds();
             yahooUrl = $"https://query1.finance.yahoo.com/v8/finance/chart/{formattedSymbol}?period1={p1}&period2={p2}&interval=1d&includeAdjustedClose=false";
         }
         else
@@ -245,34 +279,97 @@ app.MapGet("/api/stock/price/{symbol}", async (string symbol, string? date) =>
         }
 
         if (!response.IsSuccessStatusCode)
-            return Results.NotFound(new { error = "Yahoo Finance veri dondurmedi." });
+            return Results.NotFound(new { error = "Yahoo Finance veri döndürmedi." });
 
         var json = await response.Content.ReadAsStringAsync();
+        
+        // Eğer tarihsel bir fiyat isteniyorsa ve bölünme düzeltmesi gerekiyorsa
+        if (targetDate.HasValue)
+        {
+            // Yahoo'dan gelen (muhtemelen düzeltilmiş) fiyatı çek
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            var result = doc.RootElement.GetProperty("chart").GetProperty("result")[0];
+            var timestamps = result.GetProperty("timestamp").EnumerateArray().Select(t => t.GetInt64()).ToList();
+            var closes = result.GetProperty("indicators").GetProperty("quote")[0].GetProperty("close").EnumerateArray().ToList();
+            
+            var targetTs = ((DateTimeOffset)DateTime.SpecifyKind(targetDate.Value.Date, DateTimeKind.Local)).ToUnixTimeSeconds();
+            decimal yahooPrice = 0;
+            long bestDiff = long.MaxValue;
+
+            for(int i=0; i<timestamps.Count; i++) {
+                if (closes[i].ValueKind == System.Text.Json.JsonValueKind.Null) continue;
+                var diff = Math.Abs(timestamps[i] - targetTs);
+                if (diff < bestDiff) { bestDiff = diff; yahooPrice = closes[i].GetDecimal(); }
+            }
+
+            if (yahooPrice > 0) 
+            {
+                // Yahoo Finance split datasını al
+                var splitUrl = $"https://query2.finance.yahoo.com/v8/finance/chart/{formattedSymbol}?interval=1mo&events=split&range=max";
+                var splitResponse = await client.GetAsync(splitUrl);
+                if (splitResponse.IsSuccessStatusCode)
+                {
+                    var splitJson = await splitResponse.Content.ReadAsStringAsync();
+                    using var splitDoc = System.Text.Json.JsonDocument.Parse(splitJson);
+                    var resultNode = splitDoc.RootElement.GetProperty("chart").GetProperty("result")[0];
+                    
+                    decimal cumulativeFactor = 1.0m;
+                    if (resultNode.TryGetProperty("events", out var eventsNode) && eventsNode.TryGetProperty("splits", out var splitsObj))
+                    {
+                        var splitItems = splitsObj.EnumerateObject();
+                        foreach(var s in splitItems) 
+                        {
+                            var sValue = s.Value;
+                            var sDateUnix = sValue.GetProperty("date").GetInt64();
+                            var sDate = DateTimeOffset.FromUnixTimeSeconds(sDateUnix).LocalDateTime;
+                            
+                            // Sadece işlem tarihinden SONRA gerçekleşen bölünmeleri sayıyoruz (tersine düzeltme için)
+                            if (sDate > targetDate.Value.AddDays(1)) 
+                            {
+                                var num = sValue.GetProperty("numerator").GetDecimal();
+                                var den = sValue.GetProperty("denominator").GetDecimal();
+                                if (den > 0) 
+                                {
+                                    cumulativeFactor *= (num / den);
+                                }
+                            }
+                        }
+                    }
+
+                    // Yahoo fiyatını kümülatif faktörle çarparak NOMİNAL (HAM) fiyata ulaşıyoruz
+                    var nominalPrice = yahooPrice * cumulativeFactor;
+                    return Results.Ok(new { price = nominalPrice, symbol = formattedSymbol, date = targetDate.Value, factor = cumulativeFactor, isRaw = true });
+                }
+            }
+        }
+
         return Results.Content(json, "application/json");
     }
     catch (Exception ex)
     {
-        return Results.Problem($"Istek basarisiz: {ex.Message}");
+        return Results.Problem($"İstek başarısız: {ex.Message}");
     }
 });
 
-app.MapGet("/api/stock/range/{symbol}", async (string symbol, string from, string to) =>
+app.MapGet("/api/stock/range/{symbol}", async (string symbol, string from, string to, IHttpClientFactory factory) =>
 {
-    using var client = new HttpClient();
+    using var client = factory.CreateClient();
     client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
-    client.Timeout = TimeSpan.FromSeconds(15);
 
     try
     {
         var formattedSymbol = symbol.Trim().ToUpper();
-        if (!formattedSymbol.EndsWith(".IS")) formattedSymbol += ".IS";
+        // Kur sembollerini (= içerenleri) veya zaten uzantı olanları .IS ile bozma
+        if (!formattedSymbol.Contains("=") && !formattedSymbol.Contains("."))
+        {
+            formattedSymbol += ".IS";
+        }
 
         if (!DateTime.TryParse(from, out var fromDate) || !DateTime.TryParse(to, out var toDate))
-            return Results.BadRequest(new { error = "Gecersiz tarih." });
+            return Results.BadRequest(new { error = "Geçersiz tarih." });
 
         var p1 = ((DateTimeOffset)DateTime.SpecifyKind(fromDate.Date, DateTimeKind.Local)).ToUnixTimeSeconds();
         var p2 = ((DateTimeOffset)DateTime.SpecifyKind(toDate.Date.AddDays(1), DateTimeKind.Local)).ToUnixTimeSeconds();
-        
         var yahooUrl = $"https://query1.finance.yahoo.com/v8/finance/chart/{formattedSymbol}?period1={p1}&period2={p2}&interval=1d&includeAdjustedClose=false&events=div%7Csplit";
         
         var response = await client.GetAsync(yahooUrl);
@@ -286,6 +383,76 @@ app.MapGet("/api/stock/range/{symbol}", async (string symbol, string from, strin
             return Results.NotFound(new { error = "Veri bulunamadı." });
 
         var json = await response.Content.ReadAsStringAsync();
+
+        // --- Split Reversal (Ham Fiyat Düzeltme) Mantığı ---
+        try
+        {
+            // Tüm bölünmeleri çek
+            var splitUrl = $"https://query2.finance.yahoo.com/v8/finance/chart/{formattedSymbol}?interval=1mo&events=split&range=max&includeAdjustedClose=false";
+            var splitResponse = await client.GetAsync(splitUrl);
+            if (splitResponse.IsSuccessStatusCode)
+            {
+                var splitJson = await splitResponse.Content.ReadAsStringAsync();
+                using var splitDoc = System.Text.Json.JsonDocument.Parse(splitJson);
+                var splitResultNode = splitDoc.RootElement.GetProperty("chart").GetProperty("result")[0];
+                
+                var allSplits = new List<(long Date, decimal Factor)>();
+                if (splitResultNode.TryGetProperty("events", out var eventsNode) && eventsNode.TryGetProperty("splits", out var splitsObj))
+                {
+                    foreach (var s in splitsObj.EnumerateObject())
+                    {
+                        var sValue = s.Value;
+                        var sDateUnix = sValue.GetProperty("date").GetInt64();
+                        var num = sValue.GetProperty("numerator").GetDecimal();
+                        var den = sValue.GetProperty("denominator").GetDecimal();
+                        if (den > 0) allSplits.Add((sDateUnix, num / den));
+                    }
+                }
+
+                if (allSplits.Count > 0)
+                {
+                    // Chart JSON'u düzenlenebilir hale getir
+                    var options = new System.Text.Json.JsonSerializerOptions { WriteIndented = false };
+                    var doc = System.Text.Json.Nodes.JsonNode.Parse(json);
+                    var resultNode = doc?["chart"]?["result"]?[0];
+                    var timestamps = resultNode?["timestamp"]?.AsArray();
+                    var closes = resultNode?["indicators"]?["quote"]?[0]?["close"]?.AsArray();
+
+                    if (timestamps != null && closes != null)
+                    {
+                        for (int i = 0; i < timestamps.Count; i++)
+                        {
+                            if (closes[i] == null || closes[i]!.GetValueKind() == System.Text.Json.JsonValueKind.Null) continue;
+                            
+                            var ts = timestamps[i]!.GetValue<long>();
+                            var price = closes[i]!.GetValue<decimal>();
+                            
+                            // Bu veri noktasından SONRA gerçekleşen tüm bölünmeleri bul ve fiyatı geri çarparak "un-adjust" et
+                            decimal cumulativeFactor = 1.0m;
+                            foreach (var s in allSplits)
+                            {
+                                if (s.Date > ts + 86400) // 1 gün marj
+                                {
+                                    cumulativeFactor *= s.Factor;
+                                }
+                            }
+
+                            if (cumulativeFactor != 1.0m)
+                            {
+                                closes[i] = price * cumulativeFactor;
+                            }
+                        }
+                        json = doc!.ToJsonString(options);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Backend] Split reversal hatası: {ex.Message}");
+            // Hata olsa bile dokunulmamış veriyi döndür (tolerable failure)
+        }
+
         return Results.Content(json, "application/json");
     }
     catch (Exception ex)
@@ -294,32 +461,87 @@ app.MapGet("/api/stock/range/{symbol}", async (string symbol, string from, strin
     }
 });
 
-app.MapGet("/api/stock/dividends/{symbol}", async (string symbol) =>
+// ─── İş Yatırım API (401 Verdiği İçin Yahoo Finance Üzerinden Simüle Edildi) ──
+
+app.MapGet("/api/stock/dividends/{symbol}", async (string symbol, IHttpClientFactory factory) =>
 {
-    using var client = new HttpClient();
-    client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0");
-    var url = $"https://www.isyatirim.com.tr/_layouts/15/IsYatirim.Website/Common/Data.aspx/HisseTekilTemettu?hisse={symbol}";
+    using var client = factory.CreateClient();
+    client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
+    
+    var formattedSymbol = symbol.Trim().Split('.')[0].ToUpper() + ".IS";
+    var url = $"https://query2.finance.yahoo.com/v8/finance/chart/{formattedSymbol}?interval=1mo&events=div&range=max";
+    
     try {
-        var json = await client.GetStringAsync(url);
-        return Results.Content(json, "application/json");
+        var response = await client.GetStringAsync(url);
+        using var doc = System.Text.Json.JsonDocument.Parse(response);
+        var resultNode = doc.RootElement.GetProperty("chart").GetProperty("result")[0];
+        
+        var list = new List<Dictionary<string, string>>();
+        if (resultNode.TryGetProperty("events", out var eventsNode) && eventsNode.TryGetProperty("dividends", out var divObj))
+        {
+            foreach (var d in divObj.EnumerateObject())
+            {
+                var val = d.Value;
+                var dt = DateTimeOffset.FromUnixTimeSeconds(val.GetProperty("date").GetInt64()).LocalDateTime;
+                var amt = Math.Round(val.GetProperty("amount").GetDecimal(), 5).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                list.Add(new Dictionary<string, string> { 
+                    { "YIL", dt.Year.ToString() }, 
+                    { "TARIH", dt.ToString("dd.MM.yyyy") }, 
+                    { "HISSE_BASINA_TEMETTU_BRUT_TL", amt } 
+                });
+            }
+        }
+        return Results.Ok(new { value = list.OrderByDescending(x => x["YIL"]).ToList() });
     } catch (Exception ex) { return Results.Problem(ex.Message); }
 });
 
-app.MapGet("/api/stock/splits/{symbol}", async (string symbol) =>
+app.MapGet("/api/stock/splits/{symbol}", async (string symbol, IHttpClientFactory factory) =>
 {
-    using var client = new HttpClient();
-    client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0");
-    var url = $"https://www.isyatirim.com.tr/_layouts/15/IsYatirim.Website/Common/Data.aspx/HisseTekilSermayeArtirimlari?hisse={symbol}";
+    using var client = factory.CreateClient();
+    client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
+    
+    var formattedSymbol = symbol.Trim().Split('.')[0].ToUpper() + ".IS";
+    var url = $"https://query2.finance.yahoo.com/v8/finance/chart/{formattedSymbol}?interval=1mo&events=split&range=max";
+    
     try {
-        var json = await client.GetStringAsync(url);
-        return Results.Content(json, "application/json");
+        var response = await client.GetStringAsync(url);
+        using var doc = System.Text.Json.JsonDocument.Parse(response);
+        var resultNode = doc.RootElement.GetProperty("chart").GetProperty("result")[0];
+        
+        var list = new List<Dictionary<string, string>>();
+        if (resultNode.TryGetProperty("events", out var eventsNode) && eventsNode.TryGetProperty("splits", out var splitsObj))
+        {
+            foreach (var s in splitsObj.EnumerateObject())
+            {
+                var val = s.Value;
+                var dt = DateTimeOffset.FromUnixTimeSeconds(val.GetProperty("date").GetInt64()).LocalDateTime;
+                var num = val.GetProperty("numerator").GetDecimal();
+                var den = val.GetProperty("denominator").GetDecimal();
+                
+                if (den > 0) 
+                {
+                    var multiplier = num / den;
+                    var bedelsizOran = ((multiplier - 1m) * 100m).ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+                    list.Add(new Dictionary<string, string> { 
+                        { "YIL", dt.Year.ToString() }, 
+                        { "TARIH", dt.ToString("dd.MM.yyyy") }, 
+                        { "BEDELSIZ_ARTIRIM_ORANI", bedelsizOran }, 
+                        { "BEDELLI_ARTIRIM_ORANI", "0" } 
+                    });
+                }
+            }
+        }
+        return Results.Ok(new { value = list.OrderByDescending(x => x["YIL"]).ToList() });
     } catch (Exception ex) { return Results.Problem(ex.Message); }
 });
 
+app.MapRazorPages();
+app.MapControllers();
 app.MapFallbackToFile("index.html");
 
 app.Run();
 
+<<<<<<< HEAD
 static string NormalizeReturnUrl(string? returnUrl)
 {
     if (string.IsNullOrWhiteSpace(returnUrl))
@@ -349,3 +571,6 @@ static string NormalizeReturnUrl(string? returnUrl)
 internal sealed record AnalyzeExpensesRequest(string FileBytesBase64, string? FileName);
 internal sealed record AuthClaim(string Type, string Value);
 internal sealed record AuthUserResponse(bool IsAuthenticated, AuthClaim[] Claims);
+=======
+public record MetricsRequest(decimal CurrentValue);
+>>>>>>> 63ca2651a1b900fcc4e12909ce1f025e790bbaac

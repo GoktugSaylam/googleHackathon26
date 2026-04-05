@@ -95,10 +95,10 @@ public class YahooSplit
     public long Date { get; set; }
     
     [JsonPropertyName("numerator")]
-    public int Numerator { get; set; }
+    public decimal Numerator { get; set; }
     
     [JsonPropertyName("denominator")]
-    public int Denominator { get; set; }
+    public decimal Denominator { get; set; }
     
     [JsonPropertyName("splitRatio")]
     public string? SplitRatio { get; set; }

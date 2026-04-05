@@ -79,26 +79,70 @@
             </div>
 
             <div class="row g-4">
-                <!-- Fiyat Çizgi Grafiği -->
                 <div class="col-lg-8">
-                    <div class="glass-card p-4">
+                    <!-- Fiyat Çizgi Grafiği -->
+                    <div class="glass-card p-4 mb-4">
                         <div class="d-flex justify-content-between align-items-center mb-4">
                             <h4 class="fw-bold mb-0">Fiyat & Portföy Gelişimi</h4>
-                            <div class="btn-group btn-group-sm rounded-pill border border-white border-opacity-10 overflow-hidden">
-                                <button class="btn btn-dark active px-3">TL</button>
-                                <button class="btn btn-dark px-3 opacity-50">USD</button>
-                            </div>
                         </div>
                         <div style="height: 400px;">
                             <canvas id="priceChart"></canvas>
                         </div>
                     </div>
 
+                    <!-- Lot Değişim Grafiği (Yeni) -->
+                    <div class="glass-card p-4 mb-4">
+                        <h4 class="fw-bold mb-4">Yıllara Göre Lot Birikimi</h4>
+                        <div style="height: 300px;">
+                            <canvas id="lotChart"></canvas>
+                        </div>
+                    </div>
+
                     <!-- Yıllık Temettü Bar Grafiği -->
-                    <div class="glass-card p-4 mt-4">
+                    <div class="glass-card p-4 mb-4">
                         <h4 class="fw-bold mb-4">Yıllık Temettü Akışı (Net TL)</h4>
                         <div style="height: 300px;">
                             <canvas id="dividendChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Geçmiş İşlemler Tablosu (Kişisel Yatırımlar) -->
+                    <div class="glass-card p-4">
+                        <h4 class="fw-bold mb-4"><i class="bi bi-clock-history me-2"></i>Bu Hissedeki Geçmiş İşlemlerim</h4>
+                        <div class="table-responsive">
+                            <table class="table table-glass align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Tarih</th>
+                                        <th>İşlem Tipi</th>
+                                        <th class="text-end">Adet (Lot)</th>
+                                        <th class="text-end">Fiyat (₺)</th>
+                                        <th class="text-end">Toplam (₺)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (!_hisseTxs.Any())
+                                    {
+                                        <tr>
+                                            <td colspan="5" class="text-center py-4 text-muted">Bu hisseye ait kayıtlı işleminiz bulunmamaktadır.</td>
+                                        </tr>
+                                    }
+                                    @foreach (var tx in _hisseTxs.OrderByDescending(t => t.Tarih))
+                                    {
+                                        <tr>
+                                            <td>@tx.Tarih.ToString("dd.MM.yyyy")</td>
+                                            <td>
+                                                <span class="badge @(tx.IslemTipi == TransactionType.Alis ? "bg-success bg-opacity-10 text-success" : "bg-danger bg-opacity-10 text-danger") px-2 py-1">
+                                                    @(tx.IslemTipi == TransactionType.Alis ? "ALIŞ" : "SATIŞ")
+                                                </span>
+                                            </td>
+                                            <td class="text-end">@tx.Adet.ToString("N0")</td>
+                                            <td class="text-end">₺@tx.BirimFiyat.ToString("N2")</td>
+                                            <td class="text-end fw-bold">₺@((tx.Adet * tx.BirimFiyat).ToString("N2"))</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -117,8 +161,12 @@
                             <span class="fw-bold text-info">%@(_yieldOnCost.ToString("N2"))</span>
                         </div>
                         <div class="d-flex justify-content-between mb-3 border-bottom border-white border-opacity-5 pb-2">
-                            <span class="text-muted">5 Yıllık CAGR (Tahmini)</span>
-                            <span class="fw-bold text-warning">%18.4</span>
+                            <span class="text-muted">Net Hisse Başına Temettü (Son)</span>
+                            <span class="fw-bold">₺@(_lastDividendPerShare.ToString("N3"))</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-3 border-bottom border-white border-opacity-5 pb-2">
+                            <span class="text-muted">Beklenen Gelecek Temettü (1 Yıl)</span>
+                            <span class="fw-bold text-success-bright">₺@(_expectedNextDividend.ToString("N2"))</span>
                         </div>
                         <div class="d-flex justify-content-between mb-0 pb-2">
                             <span class="text-muted">Temettü Skor (Pusula)</span>
@@ -128,7 +176,7 @@
 
                     <!-- Temettü Geçmişi -->
                     <div class="glass-card p-4 h-auto">
-                        <h4 class="fw-bold mb-4">Temettü Takvimi</h4>
+                        <h4 class="fw-bold mb-4">Geçmiş Temettü Ödemeleri</h4>
                         <div class="table-responsive">
                             <table class="table table-glass table-sm v-align-middle">
                                 <thead>
@@ -176,6 +224,11 @@
     private SimulationResult? _simResult;
     private decimal _lastYield = 0;
     private decimal _yieldOnCost = 0;
+    
+    // YENİ TEMETTÜ EKLENTİLERİ
+    private List<PortfolioTransaction> _hisseTxs = new();
+    private decimal _lastDividendPerShare = 0;
+    private decimal _expectedNextDividend = 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -197,6 +250,7 @@
         // Fiyat Grafiği Hazırlığı
         var labels = _simResult.DailyPoints.Select(p => p.Date.ToString("MM/yy")).ToList();
         var prices = _simResult.DailyPoints.Select(p => p.PriceTL).ToList();
+        var values = _simResult.DailyPoints.Select(p => p.PorfolyoDegeriTL).ToList();
 
         var priceConfig = new
         {
@@ -205,25 +259,57 @@
                 labels = labels,
                 datasets = new[] {
                     new {
-                        label = "Fiyat (₺)",
+                        label = "Hisse Fiyatı (₺)",
                         data = prices,
                         borderColor = "#00d2ff",
                         backgroundColor = "rgba(0, 210, 255, 0.1)",
-                        fill = true,
+                        fill = false,
                         tension = 0.4,
+                        borderWidth = 3,
+                        pointRadius = 0,
+                        yAxisID = "y"
+                    },
+                    new {
+                        label = "Portföy Değeri (₺)",
+                        data = values,
+                        borderColor = "#ff9f43",
+                        backgroundColor = "rgba(255, 159, 67, 0.1)",
+                        fill = true,
+                        tension = 0.3,
                         borderWidth = 2,
-                        pointRadius = 0
+                        pointRadius = 0,
+                        yAxisID = "y1"
                     }
                 }
             },
             options = new {
                 responsive = true,
                 maintainAspectRatio = false,
+                interaction = new { mode = "index", intersect = false },
                 scales = new {
-                    y = new { grid = new { color = "rgba(255,255,255,0.05)" }, ticks = new { color = "#ffffff80" } },
-                    x = new { grid = new { display = false }, ticks = new { color = "#ffffff80", maxTicksLimit = 12 } }
+                    y = new { 
+                        display = true, 
+                        position = "left",
+                        grid = new { color = "rgba(255,255,255,0.05)" }, 
+                        ticks = new { color = "#00d2ff80" },
+                        title = new { display = true, text = "Hisse Fiyatı", color = "#00d2ff" }
+                    },
+                    y1 = new { 
+                        display = true, 
+                        position = "right",
+                        grid = new { drawOnChartArea = false }, 
+                        ticks = new { color = "#ff9f4380" },
+                        title = new { display = true, text = "Yatırım Değeri", color = "#ff9f43" }
+                    },
+                    x = new { 
+                        grid = new { display = false }, 
+                        ticks = new { color = "#ffffff80", maxTicksLimit = 12 } 
+                    }
                 },
-                plugins = new { legend = new { display = false } }
+                plugins = new { 
+                    legend = new { display = true, labels = new { color = "white", font = new { family = "Outfit" } } },
+                    tooltip = new { enabled = true }
+                }
             }
         };
 
@@ -259,40 +345,91 @@
         };
 
         await JS.InvokeVoidAsync("chartInterop.renderChart", "dividendChart", divConfig);
+
+        // Lot Grafiği Preparatı
+        var lotLabels = _simResult.YearlySummaries.Select(s => s.Year.ToString()).ToList();
+        var lotValues = _simResult.YearlySummaries.Select(s => s.LotCount).ToList();
+
+        var lotConfig = new
+        {
+            type = "line", // Area chart için fill=true
+            data = new {
+                labels = lotLabels,
+                datasets = new[] {
+                    new {
+                        label = "Toplam Lot",
+                        data = lotValues,
+                        borderColor = "#bf5af2",
+                        backgroundColor = "rgba(191, 90, 242, 0.2)",
+                        fill = true,
+                        tension = 0.3,
+                        borderWidth = 2,
+                        pointBackgroundColor = "#bf5af2",
+                        pointRadius = 4
+                    }
+                }
+            },
+            options = new {
+                responsive = true,
+                maintainAspectRatio = false,
+                scales = new {
+                    y = new { grid = new { color = "rgba(255,255,255,0.05)" }, ticks = new { color = "#ffffff80" } },
+                    x = new { grid = new { display = false }, ticks = new { color = "#ffffff80" } }
+                },
+                plugins = new { legend = new { display = false } }
+            }
+        };
+
+        await JS.InvokeVoidAsync("chartInterop.renderChart", "lotChart", lotConfig);
     }
 
     private async Task LoadHisseDetay()
     {
-        _metrics.Sembol = Symbol;
+        var actualSymbol = Symbol.Trim().ToUpper();
+        if (!actualSymbol.EndsWith(".IS")) actualSymbol += ".IS";
+        
+        _metrics.Sembol = actualSymbol;
 
         try 
         {
-            var livePriceTask = YahooService.GetLivePriceAsync(Symbol);
-            var smasTask = YahooService.GetSmaAsync(Symbol);
-            var dividendsTask = IsYatirim.GetDividendsAsync(Symbol);
-            var splitsTask = IsYatirim.GetSplitsAsync(Symbol);
-            var transactionsTask = PortfolioService.GetTransactionsAsync();
-            var historicalTask = HistoricalDataService.GetHistoricalDataAsync(Symbol, DateTime.Today.AddYears(-5), DateTime.Today);
+            var livePriceTask = YahooService.GetLivePriceAsync(actualSymbol);
+            var smasTask = YahooService.GetSmaAsync(actualSymbol);
+            var dividendsTask = IsYatirim.GetDividendsAsync(actualSymbol);
+            var splitsTask = IsYatirim.GetSplitsAsync(actualSymbol);
+            // Önce işlemleri çek — en eski işlem tarihini bulmak için
+            var allTxs = await PortfolioService.GetTransactionsAsync();
+            var hisseTxsForDate = allTxs.Where(t => t.Sembol?.Trim().ToUpper() == actualSymbol).ToList();
+            
+            // En eski işlem tarihinden veya en az 6 yıldan hangisi eskiyse onu kullan
+            var defaultFrom = DateTime.Today.AddYears(-6);
+            var fromDate = hisseTxsForDate.Any() 
+                ? new DateTime(Math.Min(hisseTxsForDate.Min(t => t.Tarih).Ticks, defaultFrom.Ticks))
+                : defaultFrom;
 
-            await Task.WhenAll(livePriceTask, smasTask, dividendsTask, splitsTask, transactionsTask, historicalTask);
+            var historicalTask = HistoricalDataService.GetHistoricalDataAsync(actualSymbol, fromDate, DateTime.Today);
+
+            await Task.WhenAll(livePriceTask, smasTask, dividendsTask, splitsTask, historicalTask);
 
             var livePrice = await livePriceTask;
             var smas = await smasTask;
             _dividends = await dividendsTask;
             var splitsRaw = await splitsTask;
-            var allTxs = await transactionsTask;
             var history = await historicalTask;
 
-            var hisseTxs = allTxs.Where(t => t.Sembol == Symbol && (t.IslemTipi == TransactionType.Alis || t.IslemTipi == TransactionType.Satis)).ToList();
+            _hisseTxs = allTxs.Where(t => t.Sembol?.Trim().ToUpper() == actualSymbol && (t.IslemTipi == TransactionType.Alis || t.IslemTipi == TransactionType.Satis)).ToList();
 
-            // Veri parse ve simülasyon mantığı (Aynı kaldı)
+            // Veri parse ve simülasyon mantığı
             var parsedDividends = new List<DividendHistory>();
             foreach (var d in _dividends)
             {
-                if (DateTime.TryParseExact(d.TARIH, "dd.MM.yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date) &&
-                    decimal.TryParse(d.HISSE_BASINA_TEMETTU_BRUT_TL.Replace(".", "").Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture, out var amount))
+                if (DateTime.TryParseExact(d.TARIH, "dd.MM.yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
                 {
-                    parsedDividends.Add(new DividendHistory(date, amount, 0));
+                    // Yahoo Finance'dan dönen değer: InvariantCulture ile string'e formatlandığı için "10.379" formatında geliyor. Noktayı silmeyin.
+                    var rawStr = d.HISSE_BASINA_TEMETTU_BRUT_TL.Replace(",", ".");
+                    if (decimal.TryParse(rawStr, NumberStyles.Any, CultureInfo.InvariantCulture, out var amount))
+                    {
+                        parsedDividends.Add(new DividendHistory(date, amount, 0));
+                    }
                 }
             }
 
@@ -301,7 +438,8 @@
             {
                 if (DateTime.TryParseExact(s.TARIH, "dd.MM.yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
                 {
-                    if (decimal.TryParse(s.BEDELSIZ_ARTIRIM_ORANI.Replace(".", "").Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture, out var oran) && oran > 0)
+                    var rawSplitOran = s.BEDELSIZ_ARTIRIM_ORANI.Replace(",", ".");
+                    if (decimal.TryParse(rawSplitOran, NumberStyles.Any, CultureInfo.InvariantCulture, out var oran) && oran > 0)
                     {
                         var multiplier = 1 + (oran / 100m);
                         parsedSplits.Add(new SplitInfo(date, $"{multiplier * 1000}:1000"));
@@ -309,9 +447,9 @@
                 }
             }
 
-            var simTxs = hisseTxs.Select(t => new TransactionRecord 
+            var simTxs = _hisseTxs.Select(t => new TransactionRecord 
             { 
-                Id = Guid.Parse(t.Id.Length == 36 ? t.Id : Guid.NewGuid().ToString()), 
+                Id = t.Id, 
                 Symbol = t.Sembol, 
                 Date = t.Tarih, 
                 Quantity = t.Adet, 
@@ -319,7 +457,7 @@
                 Type = t.IslemTipi == TransactionType.Satis ? TransactionType.Sell : TransactionType.Buy 
             }).ToList();
 
-            _simResult = PortfolioSimulator.Simulate(Symbol, history, parsedDividends, parsedSplits, simTxs);
+            _simResult = PortfolioSimulator.Simulate(actualSymbol, history, parsedDividends, parsedSplits, simTxs);
 
             // Metrik Atamaları
             _metrics.SMA50 = smas.sma50;
@@ -334,8 +472,16 @@
 
             if (livePrice > 0) {
                 var lastDiv = parsedDividends.OrderByDescending(d => d.Date).FirstOrDefault();
-                if (lastDiv != null) _lastYield = (lastDiv.Amount / livePrice) * 100;
-                if (_metrics.OrtalamMaliyetLot > 0 && lastDiv != null) _yieldOnCost = (lastDiv.Amount / _metrics.OrtalamMaliyetLot) * 100;
+                if (lastDiv != null) 
+                {
+                    _lastYield = (lastDiv.Amount / livePrice) * 100;
+                    _lastDividendPerShare = lastDiv.Amount * 0.90m; // Tahmini Net HBT (%10 stopaj düşüldü)
+                    _expectedNextDividend = _metrics.ToplamLot * _lastDividendPerShare;
+                }
+                if (_metrics.OrtalamMaliyetLot > 0 && lastDiv != null) 
+                {
+                    _yieldOnCost = (lastDiv.Amount / _metrics.OrtalamMaliyetLot) * 100;
+                }
             }
         }
         catch (Exception ex)

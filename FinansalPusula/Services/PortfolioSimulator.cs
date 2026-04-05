@@ -26,10 +26,19 @@ public static class PortfolioSimulator
         var relevantHistory = result.DailyPoints.Where(h => h.Date >= startDate).ToList();
         
         var pendingDrips = new List<(DateTime ExecutionDate, decimal NetAmount, DateTime OriginalDivDate)>();
+        var yearEndLots = new Dictionary<int, decimal>();
+        var yearEndValuesTL = new Dictionary<int, decimal>();
+        var yearEndValuesUSD = new Dictionary<int, decimal>();
+        var lastProcessedYear = -1;
 
         foreach (var day in relevantHistory)
         {
             var date = day.Date.Date;
+            if (lastProcessedYear != -1 && lastProcessedYear != date.Year)
+            {
+                yearEndLots[lastProcessedYear] = currentLots;
+            }
+            lastProcessedYear = date.Year;
             
             // 1. Bölünmeleri Uygula
             var todaySp = splits.FirstOrDefault(s => s.Date.Date == date);
@@ -51,7 +60,12 @@ public static class PortfolioSimulator
                 {
                     currentLots += tx.Quantity;
                     totalInvestedTL += tx.Quantity * tx.Price;
-                    totalInvestedUSD += (tx.Quantity * tx.Price) / (day.PriceTL / day.PriceUSD);
+                    // Sıfıra bölünmeyi önle: PriceUSD 0 ise USD hesabı atla
+                    if (day.PriceUSD > 0 && day.PriceTL > 0)
+                    {
+                        var kur = day.PriceTL / day.PriceUSD;
+                        totalInvestedUSD += kur > 0 ? (tx.Quantity * tx.Price) / kur : 0;
+                    }
                 }
                 else
                 {
@@ -101,7 +115,13 @@ public static class PortfolioSimulator
                     LotsBought = 0
                 });
             }
+
+            // 5. Günlük Değeri Kaydet
+            day.PorfolyoDegeriTL = currentLots * day.PriceTL;
         }
+
+        // Simülasyon sonrası DailyPoints'i relevantHistory olarak güncelle (grafik için anlamlı periyot)
+        result.DailyPoints = relevantHistory;
 
         // Final Metrikler
         result.TotalLots = Math.Round(currentLots, 3);
@@ -114,19 +134,33 @@ public static class PortfolioSimulator
         result.CurrentValueTL = currentLots * (lastPrice?.PriceTL ?? 0);
         result.CurrentValueUSD = currentLots * (lastPrice?.PriceUSD ?? 0);
 
+        if (lastProcessedYear != -1) 
+        {
+            yearEndLots[lastProcessedYear] = currentLots;
+            var lastHistoryDay = relevantHistory.LastOrDefault();
+            if (lastHistoryDay != null)
+            {
+                yearEndValuesTL[lastProcessedYear] = currentLots * lastHistoryDay.PriceTL;
+                yearEndValuesUSD[lastProcessedYear] = currentLots * lastHistoryDay.PriceUSD;
+            }
+        }
+
         // Yıllık Performans Özeti
-        var yearlyGroups = relevantHistory.GroupBy(h => h.Date.Year).OrderByDescending(g => g.Key);
+        var yearlyGroups = relevantHistory.GroupBy(h => h.Date.Year).OrderBy(g => g.Key);
         foreach (var group in yearlyGroups)
         {
             var yearEnd = group.Last();
-            // Basitlik için sadece o yılın metriklerini snapshot alıyoruz
+            var yYear = group.Key;
+            
+            var eoyLots = yearEndLots.ContainsKey(yYear) ? yearEndLots[yYear] : currentLots;
+            
             result.YearlySummaries.Add(new YearlySummary
             {
-                Year = group.Key,
-                LotCount = Math.Round(currentLots, 0), // Not fully accurate history for lots but good for current year
-                NetDividendTL = result.DividendEvents.Where(e => e.Date.Year == group.Key).Sum(e => e.NetIncome),
-                YearEndValueTL = currentLots * yearEnd.PriceTL,
-                YearEndValueUSD = currentLots * yearEnd.PriceUSD
+                Year = yYear,
+                LotCount = Math.Round(eoyLots, 0),
+                NetDividendTL = result.DividendEvents.Where(e => e.Date.Year == yYear).Sum(e => e.NetIncome),
+                YearEndValueTL = eoyLots * yearEnd.PriceTL,
+                YearEndValueUSD = eoyLots * yearEnd.PriceUSD
             });
         }
 

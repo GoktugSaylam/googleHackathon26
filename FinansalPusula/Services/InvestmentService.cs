@@ -128,51 +128,63 @@ public class InvestmentService : IStockDataService
 
     public async Task<List<HistoricalDataPoint>> GetHistoricalDataAsync(string symbol, DateTime from, DateTime to)
     {
+        // Stok tarihsel verisi
+        List<HistoricalDataPoint> points = new();
         try
         {
-            // Hisse Tarihsel Verisi (Backend proxy üzerinden)
             var stockUrl = $"/api/stock/range/{Uri.EscapeDataString(symbol)}?from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}";
             var stockRaw = await _httpClient.GetFromJsonAsync<YahooFinanceResponse>(stockUrl);
-
-            // Kur Tarihsel Verisi (Backend proxy üzerinden)
-            var forexUrl = $"/api/stock/range/TRY=X?from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}";
-            var forexRaw = await _httpClient.GetFromJsonAsync<YahooFinanceResponse>(forexUrl);
-
             var stockResult = stockRaw?.Chart?.Result?.FirstOrDefault();
-            var forexResult = forexRaw?.Chart?.Result?.FirstOrDefault();
 
             if (stockResult?.Timestamp == null || stockResult.Indicators?.Quote?.FirstOrDefault()?.Close == null)
-                return new List<HistoricalDataPoint>();
+                return points;
 
-            var points = new List<HistoricalDataPoint>();
-            var forexPrices = forexResult?.Indicators?.Quote?.FirstOrDefault()?.Close ?? new List<decimal?>();
-            var forexTimestamps = forexResult?.Timestamp ?? new List<long>();
+            // Kur tarihsel verisi – hata alırsa devam et, varsayılan kur kullan
+            List<decimal?> forexPrices = new();
+            List<long> forexTimestamps = new();
+            try
+            {
+                var forexUrl = $"/api/stock/range/USDTRY%3DX?from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}";
+                var forexRaw = await _httpClient.GetFromJsonAsync<YahooFinanceResponse>(forexUrl);
+                var forexResult = forexRaw?.Chart?.Result?.FirstOrDefault();
+                forexPrices = forexResult?.Indicators?.Quote?.FirstOrDefault()?.Close ?? new();
+                forexTimestamps = forexResult?.Timestamp ?? new();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[InvestmentService] Forex verisi alınamadı, varsayılan kur kullanılacak: {ex.Message}");
+            }
 
+            var closeList = stockResult.Indicators.Quote[0].Close!;
             for (int i = 0; i < stockResult.Timestamp.Count; i++)
             {
+                if (i >= closeList.Count) break;
                 var ts = stockResult.Timestamp[i];
-                var price = stockResult.Indicators.Quote[0].Close![i];
+                var price = closeList[i];
                 if (price == null) continue;
 
-                // En yakın kur verisini bul
-                var forexPrice = 32.5m; // Varsayılan/Fallback
-                var forexIdx = forexTimestamps.FindIndex(t => Math.Abs(t - ts) < 86400); // Aynı gün veya yakın
-                if (forexIdx >= 0 && forexIdx < forexPrices.Count && forexPrices[forexIdx] != null)
+                // En yakın kur verisini bul, yoksa fallback
+                var forexPrice = 32.5m;
+                if (forexTimestamps.Count > 0)
                 {
-                    forexPrice = forexPrices[forexIdx]!.Value;
+                    var forexIdx = forexTimestamps.FindIndex(t => Math.Abs(t - ts) < 86400 * 3);
+                    if (forexIdx >= 0 && forexIdx < forexPrices.Count && forexPrices[forexIdx] != null)
+                        forexPrice = forexPrices[forexIdx]!.Value;
                 }
 
                 points.Add(new HistoricalDataPoint
                 {
                     Date = DateTimeOffset.FromUnixTimeSeconds(ts).DateTime,
                     PriceTL = price.Value,
-                    PriceUSD = price.Value / (forexPrice > 0 ? forexPrice : 32.5m)
+                    PriceUSD = forexPrice > 0 ? price.Value / forexPrice : 0
                 });
             }
-
-            return points;
         }
-        catch { return new List<HistoricalDataPoint>(); }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[InvestmentService] GetHistoricalDataAsync hatası: {ex.Message}");
+        }
+        return points;
     }
 
     public bool IsValidBistSymbol(string symbol)

@@ -70,7 +70,7 @@ public class StockDetailMetrics
 
 public class TransactionRecord
 {
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public string Id { get; set; } = Guid.NewGuid().ToString();
     public string Symbol { get; set; } = "";
     public DateTime Date { get; set; } = DateTime.Now;
     public TransactionType Type { get; set; } = TransactionType.Buy;
@@ -83,6 +83,7 @@ public class HistoricalDataPoint
     public DateTime Date { get; set; }
     public decimal PriceTL { get; set; }
     public decimal PriceUSD { get; set; }
+    public decimal PorfolyoDegeriTL { get; set; }
 }
 
 public class SimulationResult

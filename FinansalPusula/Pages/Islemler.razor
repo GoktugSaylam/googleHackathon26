@@ -6,9 +6,9 @@
 
 <PageTitle>İşlemler - HisseMetre</PageTitle>
 
-<div class="container-fluid animate-fade-in p-4">
+<div class="container-fluid animate-fade-in p-4 min-vh-100 d-flex flex-column">
     <div class="row">
-        <div class="col-xl-10 mx-auto">
+        <div class="col-xl-10 mx-auto flex-grow-1">
             <!-- Başlık ve Ekle Butonu -->
             <div class="d-flex justify-content-between align-items-center mb-5">
                 <div>
@@ -51,7 +51,11 @@
                             {
                                 <tr>
                                     <td class="ps-4">@tx.Tarih.ToString("dd.MM.yyyy")</td>
-                                    <td class="fw-bold text-gradient">@tx.Sembol</td>
+                                    <td class="fw-bold">
+                                        <a href="/hisse-detay/@tx.Sembol.Replace(".IS", "")" class="text-gradient text-decoration-none">
+                                            @tx.Sembol
+                                        </a>
+                                    </td>
                                     <td>
                                         <span class="badge @GetBadgeClass(tx.IslemTipi) px-3 py-2">
                                             @(tx.IslemTipi == TransactionType.Alis ? "ALIŞ" : "SATIŞ")
@@ -139,8 +143,8 @@
                         <div class="col-md-6">
                             <label class="form-label small text-muted fw-bold">İŞLEM TARİHİ</label>
                             <input type="date" class="form-control glass-input"
-                                   @bind="_newTx.Tarih"
-                                   @bind:after="OnDateChanged" />
+                                   value="@_newTx.Tarih.ToString("yyyy-MM-dd")"
+                                   @onchange="OnDateChangedUI" />
                         </div>
 
                         <!-- Adet ve Birim Fiyat -->
@@ -274,10 +278,14 @@
         });
     }
 
-    private async Task OnDateChanged()
+    private async Task OnDateChangedUI(ChangeEventArgs e)
     {
-        _priceFetchStatus = null;
-        await TryFetchPrice();
+        if (DateTime.TryParse(e.Value?.ToString(), out var parsedDate))
+        {
+            _newTx.Tarih = parsedDate;
+            _priceFetchStatus = null;
+            await TryFetchPrice();
+        }
     }
 
     // OnPriceInput kaldırıldı, @bind kullanılıyor
