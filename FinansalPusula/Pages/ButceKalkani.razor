@@ -26,29 +26,29 @@
                         <div class="mb-4">
                             <label class="form-label text-muted small text-uppercase fw-bold">Aylık Net Maaş</label>
                             <div class="input-group">
-                                <span class="input-group-text bg-transparent border-white border-opacity-10 text-muted">₺</span>
-                                <input type="number" class="form-control bg-transparent border-white border-opacity-10 text-white" 
-                                       @bind="BudgetService.MonthlySalary" @bind:event="oninput" />
+                                <span class="input-group-text glass-input border-end-0 text-muted" style="border-radius: 0.75rem 0 0 0.75rem !important;">₺</span>
+                                <input type="number" class="form-control glass-input border-start-0" 
+                                       @bind="BudgetService.MonthlySalary" @bind:event="oninput" style="border-radius: 0 0.75rem 0.75rem 0 !important;" />
                             </div>
                         </div>
 
                         <div class="mb-4">
                             <label class="form-label text-muted small text-uppercase fw-bold">Yıllık Enflasyon (%)</label>
                             <div class="input-group">
-                                <span class="input-group-text bg-transparent border-white border-opacity-10 text-muted">%</span>
-                                <input type="number" class="form-control bg-transparent border-white border-opacity-10 text-white" 
-                                       @bind="BudgetService.AnnualInflationRate" @bind:event="oninput" />
+                                <span class="input-group-text glass-input border-end-0 text-muted" style="border-radius: 0.75rem 0 0 0.75rem !important;">%</span>
+                                <input type="number" class="form-control glass-input border-start-0" 
+                                       @bind="BudgetService.AnnualInflationRate" @bind:event="oninput" style="border-radius: 0 0.75rem 0.75rem 0 !important;" />
                             </div>
                         </div>
 
-                        <div class="p-3 rounded-3 bg-white bg-opacity-5 border border-white border-opacity-10">
+                        <div class="p-3 rounded-4 bg-white bg-opacity-05 border border-white border-opacity-10 shadow-sm mt-3">
                             <div class="d-flex justify-content-between mb-2">
-                                <span class="text-muted small">Son Harcama (Sprint 1)</span>
-                                <span class="fw-bold">@BudgetService.LastReport?.TotalSpending.ToString("C2")</span>
+                                <span class="text-muted small">Son Harcama Tutarı</span>
+                                <span class="fw-bold">@BudgetService.LastReport?.TotalSpending.ToString("C0")</span>
                             </div>
-                            <div class="d-flex justify-content-between">
-                                <span class="text-muted small">Boşta Duran Nakit</span>
-                                <span class="text-primary fw-bold">@BudgetService.CurrentIdleCash.ToString("C2")</span>
+                            <div class="d-flex justify-content-between align-items-center pt-2 border-top border-white border-opacity-05">
+                                <span class="text-muted small">Boşta Kalan Nakit</span>
+                                <span class="text-gradient fw-bold fs-5">@BudgetService.CurrentIdleCash.ToString("C0")</span>
                             </div>
                         </div>
                     </div>

@@ -105,6 +105,10 @@ body {
 }
 
 /* Utilities */
+.bg-opacity-05 {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
 .text-gradient {
     background: linear-gradient(to right, var(--accent-primary), var(--accent-secondary));
     -webkit-background-clip: text;
