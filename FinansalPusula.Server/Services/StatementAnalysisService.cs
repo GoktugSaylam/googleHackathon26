@@ -21,12 +21,15 @@ public sealed class StatementAnalysisService
     private const int MaxGeminiParallelRequests = 6;
     private const int MaxChunkSplitDepth = 2;
     private const int MinChunkLengthForSplit = 2000;
+    private const int MinChunkLengthForJsonSplitRetry = 8000;
     private const int MinDirectPdfTextChars = 2000;
     private const int MinDirectPdfTextFallbackChars = 800;
     private const int LargeTextThreshold = 180000;
     private const int MinFilteredTransactionLines = 80;
     private const int MinFilteredTextChars = 25000;
     private const int RepeatedBoilerplateThreshold = 8;
+    private const int MaxGeminiRepairPayloadChars = 12000;
+    private const int MaxGeminiSchemaInputChars = 24000;
     private const decimal MaxFallbackAmount = 100000000m;
 
     private static readonly Regex DatePattern = new(
@@ -42,7 +45,19 @@ public sealed class StatementAnalysisService
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex JsonNumericFieldPattern = new(
-        @"""(?<prop>amount|cost|totalSpending)""\s*:\s*(?<value>""?[-+0-9₺TLTRY\s.,]+""?)",
+        @"""(?<prop>amount|cost|totalSpending)""\s*:\s*""(?<value>[-+0-9₺TLTRY\s.,]+)""",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+
+    private static readonly Regex JsonCommaDecimalFieldPattern = new(
+        @"""(?<prop>amount|cost|totalSpending)""\s*:\s*(?<value>[-+0-9₺TLTRY\s.]*,\d+)(?=\s*[,}])",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+
+    private static readonly Regex SingleQuotedJsonTokenPattern = new(
+        @"'(?<value>[^'\\]*(?:\\.[^'\\]*)*)'",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static readonly Regex UnquotedKnownJsonPropertyPattern = new(
+        @"(?<prefix>[{,]\s*)(?<key>period|expenses|subscriptions|totalSpending|summaryAdvice|merchant|date|donem|amount|category|name|cost|alternative|savingsAdvice)\s*:",
         RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
     private static readonly string[] SubscriptionKeywords =
@@ -136,6 +151,13 @@ public sealed class StatementAnalysisService
 
         if (partialReports.Count == 0)
         {
+            var lastChanceGeminiReport = await TryBuildLastChanceGeminiReportAsync(analysisText, geminiApiKey, cancellationToken);
+            if (lastChanceGeminiReport is not null)
+            {
+                _logger.LogWarning("Gemini chunk outputs were empty. Using last-chance whole-text Gemini report before regex fallback.");
+                return SerializeReport(lastChanceGeminiReport);
+            }
+
             var fallbackReport = BuildRegexFallbackReport(analysisText);
             if (fallbackReport is not null)
             {
@@ -151,6 +173,20 @@ public sealed class StatementAnalysisService
 
         if (mergedReport.Expenses is null || mergedReport.Expenses.Count == 0)
         {
+            var bestPartialGeminiReport = TrySelectBestPartialReport(partialReports);
+            if (bestPartialGeminiReport is not null)
+            {
+                _logger.LogWarning("Merged report had zero expenses. Returning best partial Gemini report before regex fallback.");
+                return SerializeReport(bestPartialGeminiReport);
+            }
+
+            var lastChanceGeminiReport = await TryBuildLastChanceGeminiReportAsync(analysisText, geminiApiKey, cancellationToken);
+            if (lastChanceGeminiReport is not null)
+            {
+                _logger.LogWarning("Merged report had zero expenses. Using last-chance whole-text Gemini report before regex fallback.");
+                return SerializeReport(lastChanceGeminiReport);
+            }
+
             var fallbackReport = BuildRegexFallbackReport(analysisText);
             if (fallbackReport is not null)
             {
@@ -594,18 +630,6 @@ public sealed class StatementAnalysisService
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Chunk analysis failed and will be skipped. chunk={Chunk}/{Total}, chars={Chars}", chunkIndex, totalChunks, chunkText.Length);
-
-            var fallbackReport = BuildRegexFallbackReport(chunkText);
-            if (fallbackReport is not null)
-            {
-                fallbackReport.SummaryAdvice = AppendRegexFallbackWarning(fallbackReport.SummaryAdvice);
-                _logger.LogInformation("Regex fallback produced chunk-level expenses. chunk={Chunk}/{Total}, expenseCount={ExpenseCount}",
-                    chunkIndex,
-                    totalChunks,
-                    fallbackReport.Expenses?.Count ?? 0);
-                return new ChunkAnalysisResult([fallbackReport], false);
-            }
-
             return new ChunkAnalysisResult([], false);
         }
         finally
@@ -634,13 +658,16 @@ public sealed class StatementAnalysisService
                 cancellationToken);
 
             var partialReport = DeserializeExpenseReport(chunkJson);
-            return partialReport is null
-                ? []
-                : [partialReport];
+            if (partialReport is null || !HasUsableExpenses(partialReport))
+            {
+                throw new InvalidOperationException("Gemini JSON beklenen gider satirlarini icermiyor.");
+            }
+
+            return [partialReport];
         }
         catch (InvalidOperationException ex) when (IsJsonRelatedFailure(ex)
             && splitDepth < MaxChunkSplitDepth
-            && chunkText.Length >= MinChunkLengthForSplit)
+            && chunkText.Length >= Math.Max(MinChunkLengthForSplit, MinChunkLengthForJsonSplitRetry))
         {
             var (left, right) = SplitChunkInHalf(chunkText);
 
@@ -847,6 +874,9 @@ JSON yapisi (SADECE JSON dondur, aciklama ekleme):
 }}
 Kurallar:
 - Sadece bu parcadaki metni kullan.
+- JSON disinda hicbir metin yazma.
+- Tum anahtarlar cift tirnakli olsun.
+- amount/cost/totalSpending alanlari yalnizca sayi olsun (virgul yerine nokta kullan).
 - expense satirlarinda donem alanini mutlaka doldur (AA-YYYY).
 - Donem belirlenemiyorsa date alanindan tahmin et.
 
@@ -878,37 +908,472 @@ Veriler: {ocrTextChunk}";
         }
 
         var geminiResponse = await response.Content.ReadFromJsonAsync<GeminiResponse>(cancellationToken: cancellationToken);
-        var jsonResult = geminiResponse?.Candidates?.FirstOrDefault()?.Content?.Parts?.FirstOrDefault()?.Text;
+        var jsonResult = ExtractGeminiText(geminiResponse);
 
         if (string.IsNullOrWhiteSpace(jsonResult))
         {
             throw new InvalidOperationException("Gemini bos sonuc dondu.");
         }
 
-        var normalizedJson = NormalizeAndValidateJsonPayload(jsonResult);
+        string normalizedJson;
+        try
+        {
+            normalizedJson = NormalizeAndValidateJsonPayload(jsonResult);
+        }
+        catch (InvalidOperationException ex) when (IsJsonRelatedFailure(ex))
+        {
+            _logger.LogWarning(ex, "Gemini returned invalid JSON. Starting JSON repair pass. chunk={ChunkLabel}", chunkLabel);
+
+            var repaired = await TryRepairInvalidGeminiJsonAsync(
+                jsonResult,
+                apiKey,
+                model,
+                chunkLabel,
+                cancellationToken);
+
+            if (!string.IsNullOrWhiteSpace(repaired))
+            {
+                normalizedJson = repaired;
+                _logger.LogInformation("Gemini JSON repair pass succeeded. chunk={ChunkLabel}", chunkLabel);
+            }
+            else
+            {
+                var schemaConstrainedJson = await TryGenerateSchemaConstrainedJsonAsync(
+                    ocrTextChunk,
+                    apiKey,
+                    model,
+                    chunkLabel,
+                    cancellationToken);
+
+                if (!string.IsNullOrWhiteSpace(schemaConstrainedJson))
+                {
+                    normalizedJson = schemaConstrainedJson;
+                    _logger.LogInformation("Gemini schema-constrained retry succeeded. chunk={ChunkLabel}", chunkLabel);
+                }
+                else
+                {
+                    _logger.LogWarning("Gemini JSON recovery exhausted. chunk={ChunkLabel}, payloadPreview={PayloadPreview}",
+                        chunkLabel,
+                        BuildDiagnosticSnippet(jsonResult));
+                    throw;
+                }
+            }
+        }
 
         _logger.LogInformation("Gemini response parsed successfully. chunk={ChunkLabel}", chunkLabel);
 
         return normalizedJson;
     }
 
+    private async Task<string?> TryRepairInvalidGeminiJsonAsync(
+        string invalidPayload,
+        string apiKey,
+        string model,
+        string chunkLabel,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var payload = invalidPayload.Length > MaxGeminiRepairPayloadChars
+                ? invalidPayload[..MaxGeminiRepairPayloadChars]
+                : invalidPayload;
+
+            var repairPrompt = $@"Asagidaki metni, belirtilen semaya uygun tek bir GECERLI JSON nesnesine donustur.
+JSON disinda hicbir metin yazma.
+
+Sema:
+{{
+  ""period"": ""AA-YYYY veya Coklu-Donem"",
+  ""expenses"": [
+    {{ ""merchant"": ""string"", ""date"": ""GG.AA.YYYY"", ""donem"": ""AA-YYYY"", ""amount"": 0.0, ""category"": ""string"" }}
+  ],
+  ""subscriptions"": [
+    {{ ""name"": ""string"", ""cost"": 0.0, ""alternative"": ""string"", ""savingsAdvice"": ""string"" }}
+  ],
+  ""totalSpending"": 0.0,
+  ""summaryAdvice"": ""string""
+}}
+
+Kurallar:
+- Anahtar adlari tam olarak semadaki gibi olsun.
+- amount/cost/totalSpending yalnizca sayi olsun.
+- Uydurma veri ekleme; emin degilsen bos dizi veya bos string kullan.
+
+Donusturulecek metin:
+{payload}";
+
+            var request = new
+            {
+                contents = new[]
+                {
+                    new { parts = new[] { new { text = repairPrompt } } }
+                },
+                generationConfig = new
+                {
+                    responseMimeType = "application/json",
+                    temperature = 0.0,
+                    maxOutputTokens = 8192
+                }
+            };
+
+            var response = await _httpClient.PostAsJsonAsync(
+                $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}",
+                request,
+                cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogWarning("Gemini JSON repair API call failed. chunk={ChunkLabel}, statusCode={StatusCode}, error={Error}",
+                    chunkLabel,
+                    (int)response.StatusCode,
+                    error);
+                return null;
+            }
+
+            var geminiResponse = await response.Content.ReadFromJsonAsync<GeminiResponse>(cancellationToken: cancellationToken);
+            var repairedText = ExtractGeminiText(geminiResponse);
+            if (string.IsNullOrWhiteSpace(repairedText))
+            {
+                return null;
+            }
+
+            return NormalizeAndValidateJsonPayload(repairedText);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Gemini JSON repair pass failed. chunk={ChunkLabel}", chunkLabel);
+            return null;
+        }
+    }
+
+    private async Task<string?> TryGenerateSchemaConstrainedJsonAsync(
+        string ocrTextChunk,
+        string apiKey,
+        string model,
+        string chunkLabel,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var schemaInput = ocrTextChunk.Length > MaxGeminiSchemaInputChars
+                ? ocrTextChunk[..MaxGeminiSchemaInputChars]
+                : ocrTextChunk;
+
+            var schemaPrompt = $@"Asagidaki metinden harcamalari cikar ve sadece tek bir gecerli JSON nesnesi dondur.
+Uydurma veri ekleme.
+
+Kurallar:
+- JSON disinda hicbir metin yazma.
+- amount/cost/totalSpending alanlari sayi olmali.
+- expenses satirlarinda donem alanini AA-YYYY formatinda doldur.
+- Donem kesin degilse date alanindan tahmin et.
+
+Veriler:
+{schemaInput}";
+
+            var request = new
+            {
+                contents = new[]
+                {
+                    new { parts = new[] { new { text = schemaPrompt } } }
+                },
+                generationConfig = new
+                {
+                    responseMimeType = "application/json",
+                    responseSchema = BuildExpenseReportResponseSchema(),
+                    temperature = 0.0,
+                    maxOutputTokens = 12288
+                }
+            };
+
+            var response = await _httpClient.PostAsJsonAsync(
+                $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}",
+                request,
+                cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogWarning("Gemini schema-constrained retry API call failed. chunk={ChunkLabel}, statusCode={StatusCode}, error={Error}",
+                    chunkLabel,
+                    (int)response.StatusCode,
+                    error);
+                return null;
+            }
+
+            var geminiResponse = await response.Content.ReadFromJsonAsync<GeminiResponse>(cancellationToken: cancellationToken);
+            var schemaText = ExtractGeminiText(geminiResponse);
+            if (string.IsNullOrWhiteSpace(schemaText))
+            {
+                return null;
+            }
+
+            return NormalizeAndValidateJsonPayload(schemaText);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Gemini schema-constrained retry failed. chunk={ChunkLabel}", chunkLabel);
+            return null;
+        }
+    }
+
+    private static object BuildExpenseReportResponseSchema()
+    {
+        return new Dictionary<string, object?>
+        {
+            ["type"] = "OBJECT",
+            ["required"] = new[] { "period", "expenses", "subscriptions", "totalSpending", "summaryAdvice" },
+            ["properties"] = new Dictionary<string, object?>
+            {
+                ["period"] = new Dictionary<string, object?>
+                {
+                    ["type"] = "STRING"
+                },
+                ["expenses"] = new Dictionary<string, object?>
+                {
+                    ["type"] = "ARRAY",
+                    ["items"] = new Dictionary<string, object?>
+                    {
+                        ["type"] = "OBJECT",
+                        ["required"] = new[] { "merchant", "date", "donem", "amount", "category" },
+                        ["properties"] = new Dictionary<string, object?>
+                        {
+                            ["merchant"] = new Dictionary<string, object?> { ["type"] = "STRING" },
+                            ["date"] = new Dictionary<string, object?> { ["type"] = "STRING" },
+                            ["donem"] = new Dictionary<string, object?> { ["type"] = "STRING" },
+                            ["amount"] = new Dictionary<string, object?> { ["type"] = "NUMBER" },
+                            ["category"] = new Dictionary<string, object?> { ["type"] = "STRING" }
+                        }
+                    }
+                },
+                ["subscriptions"] = new Dictionary<string, object?>
+                {
+                    ["type"] = "ARRAY",
+                    ["items"] = new Dictionary<string, object?>
+                    {
+                        ["type"] = "OBJECT",
+                        ["required"] = new[] { "name", "cost", "alternative", "savingsAdvice" },
+                        ["properties"] = new Dictionary<string, object?>
+                        {
+                            ["name"] = new Dictionary<string, object?> { ["type"] = "STRING" },
+                            ["cost"] = new Dictionary<string, object?> { ["type"] = "NUMBER" },
+                            ["alternative"] = new Dictionary<string, object?> { ["type"] = "STRING" },
+                            ["savingsAdvice"] = new Dictionary<string, object?> { ["type"] = "STRING" }
+                        }
+                    }
+                },
+                ["totalSpending"] = new Dictionary<string, object?>
+                {
+                    ["type"] = "NUMBER"
+                },
+                ["summaryAdvice"] = new Dictionary<string, object?>
+                {
+                    ["type"] = "STRING"
+                }
+            }
+        };
+    }
+
+    private static string? ExtractGeminiText(GeminiResponse? response)
+    {
+        if (response?.Candidates is null || response.Candidates.Count == 0)
+        {
+            return null;
+        }
+
+        foreach (var candidate in response.Candidates)
+        {
+            if (candidate?.Content?.Parts is null || candidate.Content.Parts.Count == 0)
+            {
+                continue;
+            }
+
+            var textParts = candidate.Content.Parts
+                .Select(part => part?.Text)
+                .Where(text => !string.IsNullOrWhiteSpace(text))
+                .ToList();
+
+            if (textParts.Count == 0)
+            {
+                continue;
+            }
+
+            return string.Join("\n", textParts);
+        }
+
+        return null;
+    }
+
+    private static string BuildDiagnosticSnippet(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return "<empty>";
+        }
+
+        var oneLine = text
+            .Replace("\r", " ", StringComparison.Ordinal)
+            .Replace("\n", " ", StringComparison.Ordinal)
+            .Replace("\t", " ", StringComparison.Ordinal);
+
+        oneLine = Regex.Replace(oneLine, "\\s+", " ").Trim();
+        if (oneLine.Length <= 240)
+        {
+            return oneLine;
+        }
+
+        return oneLine[..240];
+    }
+
     private static string NormalizeAndValidateJsonPayload(string rawResponse)
     {
         foreach (var candidate in ExtractJsonPayloadCandidates(rawResponse))
         {
-            var normalized = NormalizeJsonPayload(candidate);
-            try
+            foreach (var variant in ExpandJsonPayloadCandidates(candidate))
             {
-                JsonDocument.Parse(normalized);
-                return normalized;
-            }
-            catch (JsonException)
-            {
-                // Try next candidate.
+                if (TryNormalizeIntoValidObjectJson(variant, out var parsedRawJson))
+                {
+                    return parsedRawJson;
+                }
+
+                var normalized = NormalizeJsonPayload(variant);
+                if (TryNormalizeIntoValidObjectJson(normalized, out var validJson))
+                {
+                    return validJson;
+                }
             }
         }
 
         throw new InvalidOperationException("Gemini yaniti gecerli JSON formatinda degil.");
+    }
+
+    private static IEnumerable<string> ExpandJsonPayloadCandidates(string candidate)
+    {
+        if (string.IsNullOrWhiteSpace(candidate))
+        {
+            return [];
+        }
+
+        var variants = new List<string>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+
+        void AddVariant(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return;
+            }
+
+            var trimmed = value.Trim();
+            if (trimmed.Length == 0)
+            {
+                return;
+            }
+
+            if (seen.Add(trimmed))
+            {
+                variants.Add(trimmed);
+            }
+        }
+
+        var trimmedCandidate = candidate.Trim();
+        AddVariant(trimmedCandidate);
+
+        var normalizedQuotes = trimmedCandidate
+            .Replace('\u201C', '"')
+            .Replace('\u201D', '"')
+            .Replace('\u2018', '\'')
+            .Replace('\u2019', '\'');
+        AddVariant(normalizedQuotes);
+
+        AddVariant(RepairJsonLikePayload(normalizedQuotes));
+
+        if (trimmedCandidate.StartsWith('"') && trimmedCandidate.EndsWith('"'))
+        {
+            try
+            {
+                var unwrapped = JsonSerializer.Deserialize<string>(trimmedCandidate);
+                AddVariant(unwrapped);
+                AddVariant(RepairJsonLikePayload(unwrapped ?? string.Empty));
+            }
+            catch (JsonException)
+            {
+                // Ignore and continue with other variants.
+            }
+        }
+
+        if (trimmedCandidate.Contains("\\\"", StringComparison.Ordinal))
+        {
+            var unescaped = trimmedCandidate
+                .Replace("\\r", " ", StringComparison.Ordinal)
+                .Replace("\\n", " ", StringComparison.Ordinal)
+                .Replace("\\t", " ", StringComparison.Ordinal)
+                .Replace("\\\"", "\"", StringComparison.Ordinal)
+                .Replace("\\\\", "\\", StringComparison.Ordinal);
+
+            AddVariant(unescaped);
+            AddVariant(RepairJsonLikePayload(unescaped));
+        }
+
+        return variants;
+    }
+
+    private static bool TryNormalizeIntoValidObjectJson(string candidate, out string normalizedJson)
+    {
+        normalizedJson = string.Empty;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(candidate, new JsonDocumentOptions
+            {
+                AllowTrailingCommas = true,
+                CommentHandling = JsonCommentHandling.Skip
+            });
+
+            if (doc.RootElement.ValueKind == JsonValueKind.Object)
+            {
+                normalizedJson = doc.RootElement.GetRawText();
+                return true;
+            }
+
+            if (doc.RootElement.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in doc.RootElement.EnumerateArray())
+                {
+                    if (item.ValueKind == JsonValueKind.Object)
+                    {
+                        normalizedJson = item.GetRawText();
+                        return true;
+                    }
+                }
+            }
+
+            if (doc.RootElement.ValueKind == JsonValueKind.String)
+            {
+                var embedded = doc.RootElement.GetString();
+                if (!string.IsNullOrWhiteSpace(embedded))
+                {
+                    if (TryNormalizeIntoValidObjectJson(embedded, out normalizedJson))
+                    {
+                        return true;
+                    }
+
+                    var repairedEmbedded = NormalizeJsonPayload(RepairJsonLikePayload(embedded));
+                    if (!string.Equals(repairedEmbedded, candidate, StringComparison.Ordinal)
+                        && TryNormalizeIntoValidObjectJson(repairedEmbedded, out normalizedJson))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+
+        return false;
     }
 
     private static IEnumerable<string> ExtractJsonPayloadCandidates(string rawResponse)
@@ -1034,7 +1499,8 @@ Veriler: {ocrTextChunk}";
 
     private static string NormalizeJsonPayload(string json)
     {
-        var normalized = json.Trim();
+        var normalized = RepairJsonLikePayload(json);
+        normalized = EscapeInvalidJsonStringCharacters(normalized);
         normalized = normalized.Replace("\u00A0", " ");
         normalized = TrailingCommaPattern.Replace(normalized, "${close}");
         normalized = JsonNumericFieldPattern.Replace(normalized, match =>
@@ -1050,7 +1516,130 @@ Veriler: {ocrTextChunk}";
             return $"\"{prop}\": {value.ToString(CultureInfo.InvariantCulture)}";
         });
 
+        normalized = JsonCommaDecimalFieldPattern.Replace(normalized, match =>
+        {
+            var prop = match.Groups["prop"].Value;
+            var valueToken = match.Groups["value"].Value;
+
+            if (!TryParseLooseDecimal(valueToken, out var value))
+            {
+                return match.Value;
+            }
+
+            return $"\"{prop}\": {value.ToString(CultureInfo.InvariantCulture)}";
+        });
+
         return normalized;
+    }
+
+    private static string EscapeInvalidJsonStringCharacters(string payload)
+    {
+        if (string.IsNullOrWhiteSpace(payload))
+        {
+            return payload;
+        }
+
+        var sb = new StringBuilder(payload.Length + 32);
+        var inString = false;
+        var escaped = false;
+
+        foreach (var ch in payload)
+        {
+            if (inString)
+            {
+                if (escaped)
+                {
+                    sb.Append(ch);
+                    escaped = false;
+                    continue;
+                }
+
+                if (ch == '\\')
+                {
+                    sb.Append(ch);
+                    escaped = true;
+                    continue;
+                }
+
+                if (ch == '"')
+                {
+                    sb.Append(ch);
+                    inString = false;
+                    continue;
+                }
+
+                if (ch == '\r')
+                {
+                    sb.Append("\\r");
+                    continue;
+                }
+
+                if (ch == '\n')
+                {
+                    sb.Append("\\n");
+                    continue;
+                }
+
+                if (ch == '\t')
+                {
+                    sb.Append("\\t");
+                    continue;
+                }
+
+                if (ch < 0x20)
+                {
+                    sb.Append("\\u");
+                    sb.Append(((int)ch).ToString("x4", CultureInfo.InvariantCulture));
+                    continue;
+                }
+
+                sb.Append(ch);
+                continue;
+            }
+
+            if (ch == '"')
+            {
+                sb.Append(ch);
+                inString = true;
+                continue;
+            }
+
+            if (ch < 0x20 && ch is not ('\r' or '\n' or '\t'))
+            {
+                continue;
+            }
+
+            sb.Append(ch);
+        }
+
+        return sb.ToString();
+    }
+
+    private static string RepairJsonLikePayload(string payload)
+    {
+        if (string.IsNullOrWhiteSpace(payload))
+        {
+            return payload;
+        }
+
+        var repaired = payload.Trim();
+        repaired = repaired
+            .Replace("\uFEFF", string.Empty, StringComparison.Ordinal)
+            .Replace('\u201C', '"')
+            .Replace('\u201D', '"')
+            .Replace('\u2018', '\'')
+            .Replace('\u2019', '\'');
+
+        repaired = SingleQuotedJsonTokenPattern.Replace(repaired, match =>
+        {
+            var value = match.Groups["value"].Value.Replace("\"", "\\\"", StringComparison.Ordinal);
+            return $"\"{value}\"";
+        });
+
+        repaired = UnquotedKnownJsonPropertyPattern.Replace(repaired, "${prefix}\"${key}\":");
+        repaired = TrailingCommaPattern.Replace(repaired, "${close}");
+
+        return repaired;
     }
 
     private static bool TryParseLooseDecimal(string token, out decimal value)
@@ -1150,6 +1739,137 @@ Veriler: {ocrTextChunk}";
         {
             throw new InvalidOperationException($"Gemini JSON cozumleme hatasi: {ex.Message}");
         }
+    }
+
+    private static bool HasUsableExpenses(ExpenseReportPayload report)
+    {
+        var hasExpenseRows = report.Expenses?.Any(expense => expense is not null && Math.Abs(expense.Amount) > 0m) == true;
+        if (hasExpenseRows)
+        {
+            return true;
+        }
+
+        var hasSubscriptions = report.Subscriptions?.Any(subscription =>
+            !string.IsNullOrWhiteSpace(subscription.Name)
+            && Math.Abs(subscription.Cost) > 0m) == true;
+
+        return hasSubscriptions
+            || report.TotalSpending > 0m
+            || !string.IsNullOrWhiteSpace(report.SummaryAdvice);
+    }
+
+    private async Task<ExpenseReportPayload?> TryBuildLastChanceGeminiReportAsync(
+        string analysisText,
+        string geminiApiKey,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var json = await GenerateExpenseReportJsonAsync(
+                analysisText,
+                geminiApiKey,
+                GeminiModel,
+                1,
+                1,
+                0,
+                cancellationToken);
+
+            var report = DeserializeExpenseReport(json);
+            return report is null ? null : NormalizeLooseReport(report);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Last-chance whole-text Gemini report generation failed.");
+            return null;
+        }
+    }
+
+    private static ExpenseReportPayload? TrySelectBestPartialReport(List<ExpenseReportPayload> partialReports)
+    {
+        ExpenseReportPayload? best = null;
+        var bestScore = int.MinValue;
+
+        foreach (var candidate in partialReports)
+        {
+            var normalized = NormalizeLooseReport(candidate);
+            var expenseCount = normalized.Expenses?.Count ?? 0;
+            var subscriptionCount = normalized.Subscriptions?.Count ?? 0;
+            var hasSummary = string.IsNullOrWhiteSpace(normalized.SummaryAdvice) ? 0 : 1;
+            var hasTotal = normalized.TotalSpending > 0m ? 1 : 0;
+            var score = (expenseCount * 100) + (subscriptionCount * 10) + (hasTotal * 5) + hasSummary;
+
+            if (score > bestScore)
+            {
+                best = normalized;
+                bestScore = score;
+            }
+        }
+
+        if (best is null)
+        {
+            return null;
+        }
+
+        if ((best.Expenses?.Count ?? 0) == 0
+            && (best.Subscriptions?.Count ?? 0) == 0
+            && best.TotalSpending <= 0m
+            && string.IsNullOrWhiteSpace(best.SummaryAdvice))
+        {
+            return null;
+        }
+
+        return best;
+    }
+
+    private static ExpenseReportPayload NormalizeLooseReport(ExpenseReportPayload report)
+    {
+        var normalizedExpenses = (report.Expenses ?? [])
+            .Where(e => e is not null)
+            .Select(e => NormalizeExpense(e, report.Period))
+            .ToList();
+
+        var normalizedSubscriptions = (report.Subscriptions ?? [])
+            .Where(s => s is not null && !string.IsNullOrWhiteSpace(s.Name))
+            .Select(s => new SubscriptionItemPayload
+            {
+                Name = s.Name!.Trim(),
+                Cost = s.Cost,
+                Alternative = s.Alternative,
+                SavingsAdvice = s.SavingsAdvice
+            })
+            .ToList();
+
+        var periods = normalizedExpenses
+            .Select(e => NormalizePeriod(e.Donem))
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(p => p)
+            .ToList();
+
+        var computedTotal = normalizedExpenses.Sum(e => e.Amount);
+        var total = report.TotalSpending > 0m ? report.TotalSpending : computedTotal;
+
+        var period = periods.Count switch
+        {
+            0 => NormalizePeriod(report.Period) ?? DateTime.Now.ToString("MM-yyyy"),
+            1 => periods[0]!,
+            _ => "Coklu-Donem"
+        };
+
+        var summaryAdvice = !string.IsNullOrWhiteSpace(report.SummaryAdvice)
+            ? report.SummaryAdvice
+            : (normalizedExpenses.Count > 0
+                ? BuildSummaryAdvice(normalizedExpenses, normalizedSubscriptions, periods, total)
+                : "Belge analizi tamamlandi.");
+
+        return new ExpenseReportPayload
+        {
+            Period = period,
+            Expenses = normalizedExpenses,
+            Subscriptions = normalizedSubscriptions,
+            TotalSpending = total,
+            SummaryAdvice = summaryAdvice
+        };
     }
 
     private static ExpenseReportPayload MergeReports(List<ExpenseReportPayload> partialReports)

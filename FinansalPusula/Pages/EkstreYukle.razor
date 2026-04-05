@@ -1,10 +1,12 @@
 @page "/ekstre-yukle"
+@using System.Net
 @using FinansalPusula.Services
 @using System.Net.Http.Json
 @using System.Text.Json
 @inject BudgetService BudgetService
 @inject HttpClient Http
 @inject IJSRuntime JS
+@inject NavigationManager Navigation
 
 <PageTitle>Ekstre Yükle - Budget</PageTitle>
 
@@ -401,6 +403,14 @@
 
                     if (!response.IsSuccessStatusCode)
                     {
+                        if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+                        {
+                            _errorMessage = "Oturumunuz sona ermis olabilir. Giris ekranina yonlendiriliyorsunuz...";
+                            await SafeRefreshUiAsync();
+                            NavigateToLogin();
+                            return;
+                        }
+
                         ApiProblemDetails? problem = null;
                         var rawError = await response.Content.ReadAsStringAsync();
                         try
@@ -519,5 +529,11 @@
         public string? Title { get; set; }
         public string? Detail { get; set; }
         public string? Message { get; set; }
+    }
+
+    private void NavigateToLogin()
+    {
+        var returnUrl = "/ekstre-yukle";
+        Navigation.NavigateTo($"/api/auth/login?returnUrl={Uri.EscapeDataString(returnUrl)}", forceLoad: true);
     }
 }
