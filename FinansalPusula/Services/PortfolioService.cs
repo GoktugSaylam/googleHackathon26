@@ -83,4 +83,4 @@ public class PortfolioService
     }
 }
 
-public record PortfolioMetricsRecord(double Cagr, double Xirr);
+public record PortfolioMetricsRecord(double Cagr, double Xirr, double TargetInflation = 64.0);

@@ -49,16 +49,16 @@
                         <div class="text-muted small fw-bold mb-2">XIRR (GERÇEK GETİRİ)</div>
                         <h2 class="fw-bold mb-1 @_getMetricColor(_xirr)">%@_xirr.ToString("N2")</h2>
                         <div class="mt-1">
-                            @if (_cagr > 60)
+                            @if (_cagr > _targetInflation)
                             {
                                 <span class="badge bg-success bg-opacity-20 text-success-bright border border-success border-opacity-25" style="font-size: 0.65rem;">
-                                    <i class="bi bi-trophy-fill me-1"></i> BIST100 ve Enflasyon üzeri getiri
+                                    <i class="bi bi-trophy-fill me-1"></i> Enflasyonun (%@(_cagr - _targetInflation).ToString("N1")) üzerinde!
                                 </span>
                             }
                             else
                             {
                                 <span class="badge bg-warning bg-opacity-20 text-warning border border-warning border-opacity-25" style="font-size: 0.65rem;">
-                                    <i class="bi bi-info-circle me-1"></i> Portföy Performans Verisi
+                                    <i class="bi bi-info-circle me-1"></i> Enflasyonun (%@(_targetInflation - _cagr).ToString("N1")) altında kalındı.
                                 </span>
                             }
                         </div>
@@ -81,6 +81,14 @@
                         <div class="text-muted small fw-bold mb-2">USD BAKİYE</div>
                         <h2 class="fw-bold mb-0 text-white">$@((BudgetService.CurrentIdleCash / (_usdTryRate > 0 ? _usdTryRate : 1)).ToString("N0"))</h2>
                         <i class="bi bi-currency-dollar position-absolute end-0 bottom-0 opacity-10 fs-1 me-3 mb-2"></i>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card h-100 border-primary-light position-relative overflow-hidden">
+                        <div class="text-muted small fw-bold mb-2">MAAŞ ÇARPANI (PORTFÖY/MAAŞ)</div>
+                        <h2 class="fw-bold mb-0 text-white">@(BudgetService.MonthlySalary > 0 ? (_totalValueTL / BudgetService.MonthlySalary).ToString("N1") : "0")x</h2>
+                        <div class="text-muted x-small opacity-75">Kaç maaşlık birikim yapıldı</div>
+                        <i class="bi bi-person-badge position-absolute end-0 bottom-0 opacity-10 fs-1 me-3 mb-1"></i>
                     </div>
                 </div>
             </div>
@@ -196,6 +204,7 @@
     private decimal _usdTryRate = 33.0m; // Default fallback
     private double _cagr = 0;
     private double _xirr = 0;
+    private double _targetInflation = 64.0;
     private CancellationTokenSource _cts = new();
 
     protected override async Task OnInitializedAsync()
@@ -270,6 +279,7 @@
             {
                 _cagr = metrics.Cagr;
                 _xirr = metrics.Xirr;
+                _targetInflation = metrics.TargetInflation;
             }
         }
 

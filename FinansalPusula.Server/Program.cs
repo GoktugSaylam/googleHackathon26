@@ -218,8 +218,9 @@ app.MapDelete("/api/portfolio/{id}", async (string id, TransactionRepository rep
     return Results.Ok();
 });
 
-app.MapPost("/api/portfolio/metrics", async (MetricsRequest request, TransactionRepository repo, FinancialMetricsService metricsService) =>
+app.MapPost("/api/portfolio/metrics", async (MetricsRequest request, TransactionRepository repo, ExpenseRepository expenseRepo, FinancialMetricsService metricsService) =>
 {
+    var settings = await expenseRepo.GetSettingsAsync();
     var currentValue = request.CurrentValue;
     var txs = await repo.GetAllAsync();
     
@@ -273,7 +274,7 @@ app.MapPost("/api/portfolio/metrics", async (MetricsRequest request, Transaction
 
     if (double.IsNaN(cagr) || double.IsInfinity(cagr)) cagr = 0;
 
-    return Results.Ok(new { Cagr = cagr * 100, Xirr = xirr * 100 });
+    return Results.Ok(new { Cagr = cagr * 100, Xirr = xirr * 100, TargetInflation = (double)settings.AnnualInflationRate });
 });
 
 // ─── Yahoo Finance Proxy (With Split Correction for Raw Prices) ─────────────────
