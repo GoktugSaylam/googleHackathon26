@@ -9,7 +9,11 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="8.0.15" />
+<<<<<<< HEAD
+    <PackageReference Include="UglyToad.PdfPig" Version="1.7.0-custom-5" />
+=======
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.5" />
+>>>>>>> 63ca2651a1b900fcc4e12909ce1f025e790bbaac
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\FinansalPusula\FinansalPusula.csproj" />
