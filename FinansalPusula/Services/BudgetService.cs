@@ -19,6 +19,11 @@ public class BudgetService
 
     public void AddOrUpdateReport(ExpenseReport newReport)
     {
+        if (newReport == null)
+        {
+            return;
+        }
+
         if (string.IsNullOrEmpty(newReport.Period))
         {
             newReport.Period = DateTime.Now.ToString("MM-yyyy");
@@ -33,6 +38,11 @@ public class BudgetService
                 existing.Expenses ??= new List<ExpenseItem>();
                 foreach (var exp in newReport.Expenses)
                 {
+                    if (exp == null)
+                    {
+                        continue;
+                    }
+
                     // Basit bir duplication kontrolü (Merchant, Date, Amount aynıysa ekleme)
                     if (!existing.Expenses.Any(e => 
                         e.Merchant == exp.Merchant && 
@@ -50,9 +60,43 @@ public class BudgetService
                 existing.Subscriptions ??= new List<SubscriptionItem>();
                 foreach (var sub in newReport.Subscriptions)
                 {
-                    if (!existing.Subscriptions.Any(s => s.Name == sub.Name))
+                    if (sub == null)
                     {
-                        existing.Subscriptions.Add(sub);
+                        continue;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(sub.Name))
+                    {
+                        continue;
+                    }
+
+                    var normalizedName = sub.Name.Trim();
+                    var existingSub = existing.Subscriptions.FirstOrDefault(s =>
+                        !string.IsNullOrWhiteSpace(s.Name) &&
+                        string.Equals(s.Name!.Trim(), normalizedName, StringComparison.OrdinalIgnoreCase));
+
+                    if (existingSub == null)
+                    {
+                        existing.Subscriptions.Add(new SubscriptionItem
+                        {
+                            Name = normalizedName,
+                            Cost = sub.Cost,
+                            Alternative = sub.Alternative,
+                            SavingsAdvice = sub.SavingsAdvice
+                        });
+                        continue;
+                    }
+
+                    existingSub.Cost += sub.Cost;
+
+                    if (string.IsNullOrWhiteSpace(existingSub.Alternative) && !string.IsNullOrWhiteSpace(sub.Alternative))
+                    {
+                        existingSub.Alternative = sub.Alternative;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(existingSub.SavingsAdvice) && !string.IsNullOrWhiteSpace(sub.SavingsAdvice))
+                    {
+                        existingSub.SavingsAdvice = sub.SavingsAdvice;
                     }
                 }
             }

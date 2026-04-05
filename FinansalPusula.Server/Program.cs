@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using FinansalPusula.Server.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
@@ -39,7 +40,8 @@ var authBuilder = builder.Services.AddAuthentication(options =>
 
     options.Events.OnRedirectToLogin = context =>
     {
-        if (context.Request.Path.StartsWithSegments("/bff", StringComparison.OrdinalIgnoreCase))
+        if (context.Request.Path.StartsWithSegments("/bff", StringComparison.OrdinalIgnoreCase)
+            || context.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase))
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             return Task.CompletedTask;
@@ -51,7 +53,8 @@ var authBuilder = builder.Services.AddAuthentication(options =>
 
     options.Events.OnRedirectToAccessDenied = context =>
     {
-        if (context.Request.Path.StartsWithSegments("/bff", StringComparison.OrdinalIgnoreCase))
+        if (context.Request.Path.StartsWithSegments("/bff", StringComparison.OrdinalIgnoreCase)
+            || context.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase))
         {
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
             return Task.CompletedTask;
@@ -86,6 +89,10 @@ if (isGoogleConfigured)
 }
 
 builder.Services.AddAuthorization();
+builder.Services.AddHttpClient<StatementAnalysisService>(client =>
+{
+    client.Timeout = TimeSpan.FromMinutes(15);
+});
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
@@ -159,6 +166,52 @@ app.MapGet("/bff/user", (ClaimsPrincipal user) =>
 
     return Results.Ok(new AuthUserResponse(true, claims));
 });
+
+app.MapPost("/api/ai/analyze-expenses", async (
+    AnalyzeExpensesRequest request,
+    StatementAnalysisService analysisService,
+    CancellationToken cancellationToken) =>
+{
+    if (request is null || string.IsNullOrWhiteSpace(request.FileBytesBase64))
+    {
+        return Results.BadRequest(new { message = "Dosya verisi zorunludur." });
+    }
+
+    byte[] fileBytes;
+    try
+    {
+        fileBytes = Convert.FromBase64String(request.FileBytesBase64);
+    }
+    catch (FormatException)
+    {
+        return Results.BadRequest(new { message = "Dosya verisi gecersiz formatta." });
+    }
+
+    if (fileBytes.Length == 0)
+    {
+        return Results.BadRequest(new { message = "Bos dosya gonderilemez." });
+    }
+
+    const int maxFileSizeBytes = 10 * 1024 * 1024;
+    if (fileBytes.Length > maxFileSizeBytes)
+    {
+        return Results.BadRequest(new { message = "Maksimum dosya boyutu 10 MB olmalidir." });
+    }
+
+    try
+    {
+        var reportJson = await analysisService.AnalyzeExpensesAsync(fileBytes, request.FileName, cancellationToken);
+        return Results.Content(reportJson, "application/json");
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.Problem(ex.Message, statusCode: StatusCodes.Status502BadGateway);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Beklenmeyen analiz hatasi: {ex.Message}", statusCode: StatusCodes.Status500InternalServerError);
+    }
+}).RequireAuthorization();
 
 app.MapGet("/api/stock/price/{symbol}", async (string symbol, string? date) =>
 {
@@ -293,5 +346,6 @@ static string NormalizeReturnUrl(string? returnUrl)
     return value;
 }
 
+internal sealed record AnalyzeExpensesRequest(string FileBytesBase64, string? FileName);
 internal sealed record AuthClaim(string Type, string Value);
 internal sealed record AuthUserResponse(bool IsAuthenticated, AuthClaim[] Claims);

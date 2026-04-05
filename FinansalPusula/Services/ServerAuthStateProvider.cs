@@ -43,7 +43,16 @@ public sealed class ServerAuthStateProvider(HttpClient httpClient) : Authenticat
             return AnonymousUser;
         }
 
-        var payload = await response.Content.ReadFromJsonAsync<AuthUserResponse>();
+        AuthUserResponse? payload;
+        try
+        {
+            payload = await response.Content.ReadFromJsonAsync<AuthUserResponse>();
+        }
+        catch
+        {
+            return AnonymousUser;
+        }
+
         if (payload is null || payload.IsAuthenticated is not true || payload.Claims is null || payload.Claims.Count == 0)
         {
             return AnonymousUser;

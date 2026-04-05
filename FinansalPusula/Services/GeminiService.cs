@@ -8,12 +8,16 @@ public class GeminiService
 {
     private readonly HttpClient _httpClient;
     private readonly string _apiKey;
+    private const string Model = "gemini-2.5-flash";
 
     public GeminiService(HttpClient httpClient, IConfiguration configuration)
     {
         _httpClient = httpClient;
         _apiKey = configuration["GeminiApiKey"] ?? string.Empty;
     }
+
+    private string BuildGenerateContentUrl() =>
+        $"https://generativelanguage.googleapis.com/v1beta/models/{Model}:generateContent?key={_apiKey}";
 
     public async Task<ExpenseReport?> AnalyzeExpensesAsync(string ocrText)
     {
@@ -50,12 +54,12 @@ Veriler: {ocrText}";
             }
         };
 
-        var response = await _httpClient.PostAsJsonAsync($"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={_apiKey}", request);
+        var response = await _httpClient.PostAsJsonAsync(BuildGenerateContentUrl(), request);
 
         if (!response.IsSuccessStatusCode)
         {
             var error = await response.Content.ReadAsStringAsync();
-            throw new Exception($"Gemini API Hatası: {error}");
+            throw new Exception($"Gemini API Hatasi ({Model}): {error}");
         }
 
         var geminiResponse = await response.Content.ReadFromJsonAsync<GeminiResponse>();
@@ -63,7 +67,14 @@ Veriler: {ocrText}";
 
         if (string.IsNullOrEmpty(jsonResult)) return null;
 
-        return System.Text.Json.JsonSerializer.Deserialize<ExpenseReport>(jsonResult, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        try
+        {
+            return System.Text.Json.JsonSerializer.Deserialize<ExpenseReport>(jsonResult, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            throw new Exception("Gemini yaniti gecerli JSON formatinda degildi.");
+        }
     }
 
     public async Task<string> AnalyzePortfolioAsync(List<StockData> stocks)
@@ -83,7 +94,14 @@ Hisseler: {stockListText}";
             contents = new[] { new { parts = new[] { new { text = prompt } } } }
         };
 
-        var response = await _httpClient.PostAsJsonAsync($"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={_apiKey}", request);
+        var response = await _httpClient.PostAsJsonAsync(BuildGenerateContentUrl(), request);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync();
+            throw new Exception($"Gemini API Hatasi ({Model}): {error}");
+        }
+
         var geminiResponse = await response.Content.ReadFromJsonAsync<GeminiResponse>();
         return geminiResponse?.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "Analiz üretilemedi.";
     }
