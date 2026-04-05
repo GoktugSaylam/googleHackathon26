@@ -250,6 +250,17 @@ app.MapPost("/api/budget/reports", async (HttpContext context, ExpenseReport rep
     await repo.AddOrUpdateAsync(report, googleUserId);
     return Results.Ok();
 });
+app.MapDelete("/api/budget/reports", async (HttpContext context, ExpenseRepository repo) =>
+{
+    var googleUserId = TryResolveGoogleUserId(context.User);
+    if (string.IsNullOrWhiteSpace(googleUserId))
+    {
+        return Results.Unauthorized();
+    }
+
+    await repo.ClearReportsAsync(googleUserId);
+    return Results.Ok();
+});
 
 // ─── Portfolio API ────────────────────────────────────────────────────────────
 
@@ -788,4 +799,3 @@ internal sealed record AnalyzeExpensesRequest(string FileBytesBase64, string? Fi
 internal sealed record AuthClaim(string Type, string Value);
 internal sealed record AuthUserResponse(bool IsAuthenticated, AuthClaim[] Claims);
 public record MetricsRequest(decimal CurrentValue, string? Symbol = null);
-

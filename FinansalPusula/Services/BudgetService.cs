@@ -100,6 +100,28 @@ public class BudgetService
         }
     }
 
+    public async Task<bool> ClearReportsAsync()
+    {
+        try
+        {
+            var response = await _http.DeleteAsync("api/budget/reports");
+            if (response.IsSuccessStatusCode)
+            {
+                AllReports.Clear();
+                return true;
+            }
+
+            var errorBody = await response.Content.ReadAsStringAsync();
+            Console.WriteLine($"[BudgetService] Veri temizleme hatasi: {(int)response.StatusCode} - {errorBody}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[BudgetService] Veri temizleme hatasi: {ex.Message}");
+        }
+
+        return false;
+    }
+
     private void UpdateLocalReports(ExpenseReport newReport)
     {
         var existing = AllReports.FirstOrDefault(r => r.Period == newReport.Period);

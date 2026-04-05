@@ -368,6 +368,24 @@ public class ExpenseRepository
         }
     }
 
+    public async Task ClearReportsAsync(string googleUserId)
+    {
+        if (string.IsNullOrWhiteSpace(googleUserId))
+        {
+            throw new ArgumentException("Google user id zorunludur.", nameof(googleUserId));
+        }
+
+        using var connection = await OpenConnectionAsync();
+
+        var command = connection.CreateCommand();
+        command.CommandText = $@"
+            DELETE FROM {ReportsTable}
+            WHERE GoogleUserId = $userId";
+        command.Parameters.AddWithValue("$userId", googleUserId);
+
+        await command.ExecuteNonQueryAsync();
+    }
+
     public async Task<UserSettings> GetSettingsAsync(string googleUserId)
     {
         if (string.IsNullOrWhiteSpace(googleUserId))

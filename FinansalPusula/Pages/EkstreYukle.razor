@@ -4,6 +4,7 @@
 @using System.Text.Json
 @inject BudgetService BudgetService
 @inject HttpClient Http
+@inject IJSRuntime JS
 
 <PageTitle>Ekstre Yükle - Budget</PageTitle>
 
@@ -84,6 +85,13 @@
                                     <option value="@p">@p Dönemi</option>
                                 }
                             </select>
+                            <button class="btn btn-outline-danger btn-sm" type="button" @onclick="ClearAllReportsAsync" disabled="@(_isClearing || _isProcessing)">
+                                @if (_isClearing)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                                }
+                                <i class="bi bi-trash3 me-1"></i> Arşivi Temizle
+                            </button>
                         </div>
                     </div>
 
@@ -174,6 +182,7 @@
 
 @code {
     private bool _isProcessing = false;
+    private bool _isClearing = false;
     private string _statusMessage = "";
     private string? _errorMessage;
     private string _selectedPeriod = "Hepsi";
@@ -185,6 +194,44 @@
     private void OnPeriodChanged(ChangeEventArgs e)
     {
         _selectedPeriod = e.Value?.ToString() ?? "Hepsi";
+    }
+
+    private async Task ClearAllReportsAsync()
+    {
+        _errorMessage = null;
+
+        var confirmed = await JS.InvokeAsync<bool>(
+            "confirm",
+            "Tüm gider ve ekstre analiz verileri kalıcı olarak silinecek. Devam etmek istiyor musunuz?");
+
+        if (!confirmed)
+        {
+            return;
+        }
+
+        _isClearing = true;
+        await SafeRefreshUiAsync();
+
+        try
+        {
+            var cleared = await BudgetService.ClearReportsAsync();
+            if (!cleared)
+            {
+                _errorMessage = "Arşiv temizlenemedi. Lütfen tekrar deneyin.";
+                return;
+            }
+
+            _selectedPeriod = "Hepsi";
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Arşiv temizlenirken hata oluştu: {ex.Message}";
+        }
+        finally
+        {
+            _isClearing = false;
+            await SafeRefreshUiAsync();
+        }
     }
 
     private List<ExpenseItem> GetFilteredExpenses()
