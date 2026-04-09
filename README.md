@@ -1,8 +1,8 @@
-# FinansalPusula
+# Budget
 
 ## About The Project
 
-FinansalPusula is a financial management application built within 24 hours for the **GDG OSTIMTECH HACKATHON'26**.
+Budget is a financial management application built within 24 hours for the **GDG OSTIMTECH HACKATHON'26**.
 
 The application helps users track their budget, manage portfolios, analyze expenses, and view financial metrics. It includes a frontend developed in Blazor WebAssembly and a backend developed in ASP.NET Core, with features like Google OAuth integration and Yahoo Finance API usage for stock metrics.
 
@@ -32,11 +32,11 @@ To get a local copy up and running, follow these simple steps.
 
 1. Clone the repo:
    ```sh
-   git clone https://github.com/your_username/FinansalPusula.git
+   git clone https://github.com/your_username/Budget.git
    ```
 2. Navigate to the project directory:
    ```sh
-   cd FinansalPusula
+   cd Budget
    ```
 3. Run the development server using the provided scripts:
    - On Windows:
