@@ -2,7 +2,7 @@
 
 ## About The Project
 
-FinansalPusula is a financial management application built within 24 hours for the **GDG OSTIMTECH HACKATHON'25**.
+FinansalPusula is a financial management application built within 24 hours for the **GDG OSTIMTECH HACKATHON'26**.
 
 The application helps users track their budget, manage portfolios, analyze expenses, and view financial metrics. It includes a frontend developed in Blazor WebAssembly and a backend developed in ASP.NET Core, with features like Google OAuth integration and Yahoo Finance API usage for stock metrics.
 
@@ -16,7 +16,7 @@ The application helps users track their budget, manage portfolios, analyze expen
 We are proud of the team that put this together in just 24 hours:
 
 * **Göktuğ Saylam** - [GoktugSaylam](https://github.com/GoktugSaylam)
-* **Ekin Ulaş İlhan** - [ekinoks](https://github.com/ekinoks)
+* **Ekin Ulaş İlhan** - [ekinokss](https://github.com/ekinokss)
 * **İlker Coşkunsel** - [favoriiklim](https://github.com/favoriiklim)
 * **Arda Berhan Doğan** - [odanyi-code](https://github.com/odanyi-code)
 
